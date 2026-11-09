@@ -24,6 +24,22 @@ git submodule update --remote plugins/<dir>   # 跟随作者更新
 
 不想用 submodule 也可以直接拷目录，然后 `echo <dir> >> plugins/enabled.txt`。
 
+## 更新与移除
+
+```bash
+make plugin-update NAME=<dir>   # submodule 拉到作者最新，打印新旧提交与最近 5 条日志
+make plugin-remove NAME=<dir>   # deinit + git rm + 删 .git/modules + 从 enabled.txt 移除
+```
+
+`plugin-update` 只对 **submodule** 生效；vendored 普通目录会提示如何转成可跟踪的 submodule。
+更新完记得 `git commit`（脚本只 `git add`）再 `make build PLUGINS=1`。
+
+`plugin-remove` 只改仓库：**已经在跑的容器 profile 不会自动卸载**。旧实例要额外处理：
+
+```bash
+docker exec -it dsh-web dsh plugin --profile web remove <npm 包名>
+# 或者换一个全新的 data 卷重建
+```
 ## 插件需要额外动作时
 
 在插件目录里放一个可执行的 `dsh-install.sh`，容器启动时会在 `dsh plugin add` 之后执行它，环境变量：
