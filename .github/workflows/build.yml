@@ -26,6 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0      # 需要能查/推 tag
 
       - name: Set up QEMU (arm64)
         uses: docker/setup-qemu-action@v3
@@ -78,20 +80,40 @@ jobs:
           IMG="ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
           docker run --rm --platform linux/arm64 --entrypoint sh "$IMG" -lc "uname -m; dsh --version"
 
+      - name: Tag dsh-<ver>[-plugins] if new
+        id: tag
+        run: |
+          set -u
+          TAG="dsh-${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q "refs/tags/$TAG$"; then
+            echo "created=0" >> "$GITHUB_OUTPUT"
+            echo "tag $TAG 已存在，跳过"
+          else
+            git tag "$TAG"
+            git push origin "refs/tags/$TAG"
+            echo "created=1" >> "$GITHUB_OUTPUT"
+            echo "已创建 tag $TAG"
+          fi
+
       - name: Manifest summary
         run: |
           IMG="ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
           docker buildx imagetools inspect "$IMG" | sed -n "1,20p"
 
       - name: Release
-        if: github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/dsh-'))
+        if: |
+          github.event_name != 'pull_request' && (
+            steps.tag.outputs.created == '1' ||
+            startsWith(github.ref, 'refs/tags/dsh-') ||
+            (github.event_name == 'workflow_dispatch' && inputs.release)
+          )
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="dsh-${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
           IMG="ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
           if gh release view "$TAG" >/dev/null 2>&1; then
-            echo "release $TAG exists"
+            echo "release $TAG 已存在"
           else
             gh release create "$TAG" --title "$TAG" --notes "DSH ${{ steps.v.outputs.pinned }} · plugins: ${{ steps.v.outputs.plugins == '1' && 'integrated' || 'none' }} · platforms: linux/amd64, linux/arm64 — docker pull --platform linux/arm64 $IMG"
           fi
