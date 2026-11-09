@@ -173,25 +173,29 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 - 默认单实例单用户：一个容器一个 launch token 一个 owner。多人用请一容器一用户。
 - 默认 HTTP 明文，只适合内网；上公网请在前面加 TLS 反代（保留 Host、透传 upgrade）。
 
-## 多架构
+## 多架构（linux/amd64 + linux/arm64）
 
-镜像里没有架构相关的原生包（这类预编译运行包按平台分发、体积大，属于独立仓库的范畴，见 plugins/README「不在本仓库范围」），所以：
+镜像里没有架构相关的原生包（这类预编译运行包按平台分发、体积大，属于独立仓库的范畴，见 plugins/README「不在本仓库范围」），
+所以两个架构都能直接构建：
 
-```bash
-docker buildx build --platform linux/amd64,linux/arm64 -t <repo>:latest .
-```
+| 场景 | 命令 |
+|---|---|
+| 本地 arm64 镜像 | `make build-arm64`（qemu，tag 带 `-arm64`） |
+| 本地 amd64 镜像 | `make build` |
+| 多架构 manifest 推送 GHCR | `make ghcr`（`buildx --platform linux/amd64,linux/arm64 --push`） |
 
-本机跑 arm64 需要 `docker run --privileged --rm tonistiigi/binfmt --install arm64`。
+CI（`.github/workflows/build.yml`）用 `docker/setup-qemu-action` + `docker/setup-buildx-action`，
+一次多架构 build 产出 manifest，然后分别冒烟：
 
-## 镜像与发布
+- amd64：`docker run --platform linux/amd64 … dsh --version`，附带插件隔离检查（默认镜像 `/opt/plugins` 必须为空）；
+- arm64：`docker run --platform linux/arm64 … sh -lc "uname -m; dsh --version"`（QEMU 下真实执行）；
+- 收尾用 `docker buildx imagetools inspect` 打印 manifest 列表。
 
-| 产物 | 触发 | 说明 |
-|---|---|---|
-| ghcr.io/goovoz/dsh:<dshVersion> / :latest | push、每周一、手动 | 不含第三方插件 |
-| ghcr.io/goovoz/dsh:<dshVersion>-plugins / :latest-plugins | 手动 with_plugins=true | 含 plugins/ |
-| GitHub Release dsh-<ver>[-plugins] | 手动 / tag dsh-* | 说明里给 pull 命令；重复触发不重复建 |
+拉取指定架构：`docker pull --platform linux/arm64 ghcr.io/goovoz/dsh:<ver>`。
+本机要跑 arm64 容器需先注册 binfmt：`docker run --privileged --rm tonistiigi/binfmt --install arm64`。
 
-本地等价：make ghcr 或 make ghcr PLUGINS=1。
+注意：`plugins/` 里的纯 JS 插件两个架构通用；若将来接入带原生二进制的插件，必须按平台提供运行包，
+否则 arm64 镜像起不来——那类插件应放进独立仓库。
 
 ## 许可
 
