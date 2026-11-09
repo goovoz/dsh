@@ -1,0 +1,62 @@
+name: bump
+
+on:
+  schedule:
+    - cron: '0 4 * * *'      # 每天 04:00 UTC 检查上游 dsh
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '只检查，不提交'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve versions
+        id: v
+        run: |
+          set -u
+          pinned=$(node -p "require('./package.json').dshVersion")
+          upstream=$(npm view @deepseek-ai/dsh version)
+          echo "pinned=$pinned upstream=$upstream"
+          echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
+          echo "upstream=$upstream" >> "$GITHUB_OUTPUT"
+
+      - name: Decide
+        id: decide
+        run: |
+          set -u
+          pinned="${{ steps.v.outputs.pinned }}"
+          upstream="${{ steps.v.outputs.upstream }}"
+          if [ "$pinned" = "$upstream" ]; then
+            echo "bump=0" >> "$GITHUB_OUTPUT"; echo "已是最新（$pinned）"; exit 0
+          fi
+          if node scripts/semver-gt.mjs "$upstream" "$pinned"; then
+            echo "bump=1" >> "$GITHUB_OUTPUT"; echo "需要 bump：$pinned -> $upstream"
+          else
+            echo "bump=0" >> "$GITHUB_OUTPUT"; echo "上游不比当前新，跳过"
+          fi
+
+      - name: Update package.json and push
+        if: steps.decide.outputs.bump == '1' && inputs.dry_run != true
+        run: |
+          node -e "const f='package.json';const p=require('./'+f);p.dshVersion=process.argv[1];require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')" "${{ steps.v.outputs.upstream }}"
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git add package.json
+          git commit -m "chore: bump dsh to ${{ steps.v.outputs.upstream }}"
+          git push
+
+      - name: Trigger build and release
+        if: steps.decide.outputs.bump == '1' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run build.yml --ref master -f with_plugins=false -f release=true

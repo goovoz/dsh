@@ -15,9 +15,12 @@ dsh_v=$(dsh --version 2>/dev/null | tail -1)
 echo "[extras] dsh=${dsh_v}"
 while IFS= read -r pkg; do
   [ -z ${pkg} ] && continue
-  ver=$(npm view ${pkg}@${dsh_v} version 2>/dev/null || true)
-  [ -z ${ver} ] && ver=$(npm view ${pkg} version 2>/dev/null || true)
-  if [ -z ${ver} ]; then echo "[extras] 跳过 ${pkg}（无可用版本）"; continue; fi
+  # 三级回退：精确同版本 -> 同 major.minor 最高 -> latest（见 scripts/resolve-extras.mjs）
+  resolved=$(node /opt/dsh/scripts/resolve-extras.mjs "${pkg}" "${dsh_v}" 2>/dev/null || true)
+  ver=${resolved%% *}
+  tier=${resolved##* }
+  if [ -z "${ver}" ]; then echo "[extras] 跳过 ${pkg}（无可用版本）"; continue; fi
+  echo "[extras] ${pkg} 解析 ${ver}（${tier}）"
   if dsh plugin --profile ${PROFILE} add ${pkg}@${ver} >/dev/null 2>&1; then
     echo "[extras] ${pkg}@${ver} ok"
   else
