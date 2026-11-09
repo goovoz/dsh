@@ -24,6 +24,8 @@ if 'tool-bash' not in raw:
 BEGIN = '# >>> armor preset (dsh-armor-gen5) begin'
 END = '# <<< armor preset (dsh-armor-gen5) end'
 text = p.read_text(encoding='utf-8') if p.exists() else ''
+# 模板里的空数组字面量 [] 必须先去掉，否则追加后是两份 YAML 文档
+text = '\n'.join(line for line in text.splitlines() if line.strip() != '[]')
 if BEGIN in text:
     head, rest = text.split(BEGIN, 1)
     tail = rest.split(END, 1)[1] if END in rest else ''

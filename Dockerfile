@@ -33,6 +33,7 @@ RUN mkdir -p /opt/dsh /data/dsh /data/workspace /run/dsh /opt/plugins \
  && sed -i 's|^root:x:0:0:root:/root:|root:x:0:0:root:/data/workspace:|' /etc/passwd
 
 COPY scripts/ /opt/dsh/scripts/
+COPY extras.txt /opt/dsh/extras.txt
 COPY capture.mjs gateway.mjs entrypoint.sh /opt/dsh/
 RUN chmod +x /opt/dsh/entrypoint.sh /opt/dsh/scripts/*.sh
 
