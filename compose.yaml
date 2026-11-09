@@ -21,8 +21,11 @@ services:
       HOME: /data/workspace
       DSH_HOME: /data/dsh
       DSH_WORKSPACE: /data/workspace
-      DSH_EXTRAS: ${WITH_EXTRAS:-1}
-      DSH_PLUGINS: ${WITH_PLUGINS:-0}
+      # 运行期开关，默认交给镜像内置值：
+      #   -plugins 镜像内置 DSH_PLUGINS=1、DSH_EXTRAS=1；普通镜像内置 0 / 1
+      # 这里不写 DSH_PLUGINS，避免把 -plugins 镜像的默认值覆盖成 0；要覆盖就显式传：
+      #   DSH_PLUGINS=0 docker compose up -d
+      DSH_EXTRAS: ${DSH_EXTRAS:-1}
       TZ: ${TZ:-Asia/Shanghai}
     # compose >= 2.24 才支持 path/required 写法；老版本请删掉这段，改用 --env-file
     env_file:

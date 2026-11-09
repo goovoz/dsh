@@ -131,6 +131,8 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 |---|---|---|
 | `DSH_VERSION` | `package.json#dshVersion` | 构建参数，决定装哪版 `@deepseek-ai/dsh` |
 | `PUBLIC_HOST` | `192.168.1.1:8899`（占位） | **必填**：浏览器实际访问的 `host[:port]`；占位/回环/空值会被拒绝启动（exit 64） |
+| `DSH_PLUGINS` | 随镜像：普通镜像 `0`，`-plugins` 镜像 `1` | **运行期**开关：1 = 把镜像里 `/opt/plugins` 的插件装进 profile。构建期对应参数叫 `WITH_PLUGINS` |
+| `DSH_EXTRAS` | `1` | **运行期**开关：1 = 安装 `extras.txt` 里的桌面等价插件组（构建期对应 `WITH_EXTRAS`） |
 | `DSH_ALLOW_LOOPBACK` | `0` | 置 1 时放行 `127.0.0.1` 作为 PUBLIC_HOST（仅本机自测） |
 | `DSH_PORT` | `8899` | 宿主机端口 |
 | `IMAGE_TAG` | `ghcr.io/goovoz/dsh:latest` | 运行哪个镜像；`make up` 会自动注入本地构建 tag |

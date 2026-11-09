@@ -4,6 +4,12 @@ on:
   push:
     branches: [master]
     tags: ["dsh-*"]
+    paths-ignore:
+      - "**.md"
+      - "compose.yaml"
+      - "compose.build.yaml"
+      - "LICENSE"
+      - ".gitignore"
   schedule:
     - cron: "0 3 * * 1"
   workflow_dispatch:
