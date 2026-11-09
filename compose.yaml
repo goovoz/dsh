@@ -1,3 +1,8 @@
+# DSH Web —— 浏览器访问的 DeepSeekRuntime（容器部署）
+#
+# 两条路都能起：
+#   1) make build && make up          本地构建（IMAGE_TAG 由 Makefile 注入，带 -plugins 后缀也一致）
+#   2) docker compose up -d           直接拉发布镜像（默认 ghcr.io/goovoz/dsh:latest，多架构）
 services:
   dsh-web:
     build:
@@ -5,8 +10,10 @@ services:
       args:
         DSH_VERSION: ${DSH_VERSION:-0.2.2-rc.1}
         WITH_EXTRAS: ${WITH_EXTRAS:-1}
-    image: dsh-web:${DSH_VERSION:-latest}
-    container_name: dsh-web
+        WITH_PLUGINS: ${WITH_PLUGINS:-0}
+    # 默认指向已发布的多架构镜像；make up 会注入本地构建出的完整 tag
+    image: ${IMAGE_TAG:-ghcr.io/goovoz/dsh:latest}
+    container_name: ${CONTAINER_NAME:-dsh-web}
     restart: unless-stopped
     ports:
       - "${DSH_PORT:-8899}:8899"
@@ -17,7 +24,9 @@ services:
       DSH_HOME: /data/dsh
       DSH_WORKSPACE: /data/workspace
       DSH_EXTRAS: ${WITH_EXTRAS:-1}
+      DSH_PLUGINS: ${WITH_PLUGINS:-0}
       TZ: ${TZ:-Asia/Shanghai}
+    # compose >= 2.24 才支持 path/required 写法；老版本请删掉这段，改用 --env-file
     env_file:
       - path: ./secrets.env
         required: false

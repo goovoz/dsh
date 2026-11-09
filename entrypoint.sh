@@ -9,6 +9,12 @@ mkdir -p "${DSH_HOME}" "${DSH_WORKSPACE}" /run/dsh
 export PUBLIC_HOST="${PUBLIC_HOST:-127.0.0.1:8899}"
 
 echo "[entrypoint] dsh $(dsh --version 2>/dev/null | head -1) | home=${DSH_HOME} | profile=${PROFILE} | public=${PUBLIC_HOST}"
+case "${PUBLIC_HOST}" in
+  127.*|localhost:*|0.0.0.0:*)
+    echo "[entrypoint] 提示：PUBLIC_HOST=${PUBLIC_HOST} 是回环地址；从其它机器请用 http://<宿主机IP>:<端口>/ 访问"
+    echo "[entrypoint]       （网关会把上游 Host 规整为 ${PUBLIC_HOST}，功能不受影响；只是日志里的链接只对本机有效）"
+    ;;
+esac
 
 if [ "${DSH_EXTRAS:-1}" = "1" ]; then
   /opt/dsh/scripts/install-extras.sh || echo "[entrypoint] extras 安装失败（继续启动）"
