@@ -158,7 +158,7 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 
 ## 多架构
 
-镜像里没有架构相关的原生包（Ghidra/JDK/JPype 那类不在本仓库范围），所以：
+镜像里没有架构相关的原生包（这类预编译运行包按平台分发、体积大，属于独立仓库的范畴，见 plugins/README「不在本仓库范围」），所以：
 
 ```bash
 docker buildx build --platform linux/amd64,linux/arm64 -t <repo>:latest .
