@@ -19,13 +19,13 @@
 ```bash
 git clone https://github.com/goovoz/dsh.git && cd dsh
 make build                       # 构建镜像（默认用 package.json 里的 dshVersion）
-PUBLIC_HOST=192.168.1.10:8899 make up
+make up
 ```
 
-浏览器打开 `http://<PUBLIC_HOST>/` 即可，无需点带 token 的链接。
+浏览器打开 `http://<本机IP>:<端口>/` 即可，无需点带 token 的链接。
 
-> `PUBLIC_HOST` 必须等于浏览器实际访问的 `host[:port]`：DSH 的 `/api` 信任围栏按 `Host` 比对，
-> 会话 cookie 也按 authority 签名；换端口/换域名要一起改。
+> 不再需要设 `PUBLIC_HOST`：容器内 DSH 用固定内部 authority `dsh.internal`，网关按来访 `Host` 自动适配，
+> 浏览器用 `http://<本机IP>:<端口>/` 直接访问即可。要强制指定 authority 时再设 `PUBLIC_HOST`。
 
 ## 随上游更新（自动）
 
@@ -129,7 +129,7 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 | 变量 | 默认 | 说明 |
 |---|---|---|
 | `DSH_VERSION` | `package.json#dshVersion` | 构建参数，决定装哪版 `@deepseek-ai/dsh` |
-| `PUBLIC_HOST` | `127.0.0.1:8899` | 浏览器实际访问的 authority，必须与访问地址一致 |
+| `PUBLIC_HOST` | 空（自动） | 可选。留空时用内部 authority `dsh.internal` + 网关改写，任意地址可访问；显式设置则沿用该 authority |
 | `DSH_PORT` | `8899` | 宿主机端口 |
 | `WITH_EXTRAS` / `DSH_EXTRAS` | `1` | 是否安装 `extras.txt` 里的插件组 |
 | `TZ` | `Asia/Shanghai` | 时区 |
@@ -145,7 +145,7 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
             └─ /api/remote.mux WebSocket 用 net 直通
                       ▼
             dsh --profile web --host 127.0.0.1 --port 3080
-                --public-url http://<PUBLIC_HOST>/ --trusted-host <PUBLIC_HOST> <host>
+                --trusted-host dsh.internal 127.0.0.1   # 网关把上游 Host 改写为 dsh.internal
                       ▼
             /data/dsh（DSH_HOME） + /data/workspace（工作区）= ./data 卷
 ```
@@ -153,7 +153,7 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 三条硬约束（改配置时容易踩）：
 
 1. 后端只能监听**具体 IP**，DSH 在加载期拒绝通配地址；
-2. `--trusted-host` 必须覆盖浏览器看到的 authority（含端口），否则每个 `/api` 调用 403；
+2. `--trusted-host` 与浏览器 authority 必须对得上——现在由网关统一改写上游 Host 为 `dsh.internal` 解决，不再依赖手工配置；
 3. launch token 是**进程级**凭证，只能在服务端换 cookie，不能暴露给浏览器。
 
 ## 排错
@@ -161,7 +161,7 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 | 现象 | 处理 |
 |---|---|
 | 页面 302 循环 | 日志里没有 `dsh web: http://...?token=`，说明 dsh 没起来；看 entrypoint 输出 |
-| 每个 API 都 403 | `PUBLIC_HOST` 与实际访问地址不一致 |
+| 每个 API 都 403 | 旧镜像（网关不改写 Host）→ 升级镜像；或显式把 `PUBLIC_HOST` 设成你访问用的 `host:port` |
 | bash 工具报 `SANDBOX_UNAVAILABLE` | 少了 `cap_add: SYS_ADMIN` 或 `apparmor=unconfined`；或宿主 `kernel.apparmor_restrict_unprivileged_userns=1` |
 | 插件没生效 | `docker logs dsh-web | grep plugins`；`enabled.txt` 是否列了该目录 |
 | 补丁冲突导致构建失败 | 插件升级了，按提示重新生成 `patches/0002-*.patch` |

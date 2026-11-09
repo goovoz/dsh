@@ -19,7 +19,7 @@ services:
       - "${DSH_PORT:-8899}:8899"
     environment:
       # 浏览器实际访问的 authority（含端口）；cookie 按它签名，改了要一起改
-      PUBLIC_HOST: ${PUBLIC_HOST:-127.0.0.1:8899}
+      PUBLIC_HOST: ${PUBLIC_HOST:-}   # 可留空：网关按来访 Host 自动适配
       HOME: /data/workspace
       DSH_HOME: /data/dsh
       DSH_WORKSPACE: /data/workspace
