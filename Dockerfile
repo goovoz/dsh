@@ -11,7 +11,7 @@ ARG WITH_PLUGINS=0
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
       ca-certificates curl git tini procps bubblewrap ripgrep less patch \
-      tzdata locales sudo python3 \
+      tzdata locales sudo python3 iproute2 \
  && rm -rf /var/lib/apt/lists/*
 
 # 上游 runtime：一条 npm 版本决定一切

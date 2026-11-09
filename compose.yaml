@@ -16,8 +16,8 @@ services:
     ports:
       - "${DSH_PORT:-8899}:8899"
     environment:
-      # 可留空：网关按来访 Host 自动适配；显式设置则固定为该 authority
-      PUBLIC_HOST: ${PUBLIC_HOST:-}
+      # 必填：浏览器实际访问的 host[:port]（含端口）。默认值只是占位，容器会拒绝启动并提示你改
+      PUBLIC_HOST: ${PUBLIC_HOST:-192.168.1.1:8899}
       HOME: /data/workspace
       DSH_HOME: /data/dsh
       DSH_WORKSPACE: /data/workspace

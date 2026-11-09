@@ -8,17 +8,18 @@ GHCR ?= ghcr.io/goovoz/dsh
 SUFFIX := $(if $(filter 1,$(PLUGINS)),-plugins,)
 ALIAS := $(if $(filter 1,$(PLUGINS)),latest-plugins,latest)
 CONTAINER_NAME ?= dsh-web
+ALLOW_LOOPBACK ?= 0
 URL ?=
 NAME ?=
 
-.PHONY: help build build-arm64 build-compose up up-build up-pull down logs shell latest bump ghcr plugin-add plugin-update plugin-remove plugin-list
+.PHONY: help build build-arm64 build-compose up up-build up-pull down logs shell latest bump ghcr plugin-add plugin-update plugin-remove plugin-list require-public-host
 
 help:
 	@echo "make build                      # 本地构建 amd64 镜像（$(IMAGE):$(DSH_VERSION)$(SUFFIX)，插件: $(if $(filter 1,$(PLUGINS)),集成,不集成)）"
 	@echo "make build PLUGINS=1            # 构建含第三方插件的镜像"
 	@echo "make build-arm64                # 本地构建 arm64 镜像（qemu）"
 	@echo "make build-compose              # 用 compose 叠加文件构建（tag: dsh-web:local）"
-	@echo "make up                         # 用本地镜像启动（需要 PUBLIC_HOST=host:port）"
+	@echo "make up                         # 用本地镜像启动（PUBLIC_HOST 必填）"
 	@echo "make up-build                   # 先构建再启动"
 	@echo "make up-pull                    # 直接拉发布镜像并启动（不本地构建）"
 	@echo "make down / logs / shell        # 停止 / 日志 / 进容器"
@@ -44,20 +45,28 @@ build-arm64:
 	  -t $(IMAGE):$(DSH_VERSION)$(SUFFIX)-arm64 .
 
 # 关键：IMAGE_TAG 必须和 build 产出的 tag 完全一致（含 -plugins 后缀），否则 compose 会去找不存在的镜像
-up:
+require-public-host:
+	@if [ -z "$(PUBLIC_HOST)" ]; then \
+	  echo "PUBLIC_HOST 未设置（必填）：必须等于浏览器实际访问的 host[:port]" >&2; \
+	  echo "  例：PUBLIC_HOST=192.168.1.10:8899 make up" >&2; \
+	  echo "  本机自测：PUBLIC_HOST=127.0.0.1:8899 DSH_ALLOW_LOOPBACK=1 make up" >&2; \
+	  exit 2; \
+	fi
+
+up: require-public-host
 	DSH_VERSION=$(DSH_VERSION) WITH_PLUGINS=$(PLUGINS) WITH_EXTRAS=$(EXTRAS) \
 	IMAGE_TAG=$(IMAGE):$(DSH_VERSION)$(SUFFIX) CONTAINER_NAME=$(CONTAINER_NAME) \
-	DSH_PORT=$(PORT) docker compose up -d
+	DSH_PORT=$(PORT) DSH_ALLOW_LOOPBACK=$(ALLOW_LOOPBACK) docker compose up -d
 
 build-compose:
 	docker compose -f compose.yaml -f compose.build.yaml build
 
-up-build: build
+up-build: build require-public-host
 	DSH_VERSION=$(DSH_VERSION) WITH_PLUGINS=$(PLUGINS) WITH_EXTRAS=$(EXTRAS) \
 	IMAGE_TAG=$(IMAGE):$(DSH_VERSION)$(SUFFIX) CONTAINER_NAME=$(CONTAINER_NAME) \
-	DSH_PORT=$(PORT) docker compose up -d
+	DSH_PORT=$(PORT) DSH_ALLOW_LOOPBACK=$(ALLOW_LOOPBACK) docker compose up -d
 
-up-pull:
+up-pull: require-public-host
 	CONTAINER_NAME=$(CONTAINER_NAME) DSH_PORT=$(PORT) docker compose pull && \
 	CONTAINER_NAME=$(CONTAINER_NAME) DSH_PORT=$(PORT) docker compose up -d
 

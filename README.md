@@ -19,13 +19,13 @@
 ```bash
 git clone https://github.com/goovoz/dsh.git && cd dsh
 make build                       # 构建镜像（默认用 package.json 里的 dshVersion）
-make up
+PUBLIC_HOST=192.168.1.10:8899 make up
 ```
 
 浏览器打开 `http://<本机IP>:<端口>/` 即可，无需点带 token 的链接。
 
-> 不再需要设 `PUBLIC_HOST`：容器内 DSH 用固定内部 authority `dsh.internal`，网关按来访 `Host` 自动适配，
-> 浏览器用 `http://<本机IP>:<端口>/` 直接访问即可。要强制指定 authority 时再设 `PUBLIC_HOST`。
+> `PUBLIC_HOST` **必填**，必须等于浏览器实际访问的 `host[:port]`（含端口）。compose 里的默认值 `192.168.1.1:8899` 只是占位，
+> 容器发现是占位值/回环/空值会**直接退出并打印候选地址**（exit 64）。本机自测可用 `PUBLIC_HOST=127.0.0.1:8899 DSH_ALLOW_LOOPBACK=1`。
 
 ## 随上游更新（自动）
 
@@ -130,7 +130,8 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 | 变量 | 默认 | 说明 |
 |---|---|---|
 | `DSH_VERSION` | `package.json#dshVersion` | 构建参数，决定装哪版 `@deepseek-ai/dsh` |
-| `PUBLIC_HOST` | 空（自动） | 可选。留空时用内部 authority `dsh.internal` + 网关改写，任意地址可访问；显式设置则沿用该 authority |
+| `PUBLIC_HOST` | `192.168.1.1:8899`（占位） | **必填**：浏览器实际访问的 `host[:port]`；占位/回环/空值会被拒绝启动（exit 64） |
+| `DSH_ALLOW_LOOPBACK` | `0` | 置 1 时放行 `127.0.0.1` 作为 PUBLIC_HOST（仅本机自测） |
 | `DSH_PORT` | `8899` | 宿主机端口 |
 | `IMAGE_TAG` | `ghcr.io/goovoz/dsh:latest` | 运行哪个镜像；`make up` 会自动注入本地构建 tag |
 | `CONTAINER_NAME` | `dsh-web` | 容器名（多套并存时改它） |
@@ -164,7 +165,8 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 | 现象 | 处理 |
 |---|---|
 | 页面 302 循环 | 日志里没有 `dsh web: http://...?token=`，说明 dsh 没起来；看 entrypoint 输出 |
-| 每个 API 都 403 | 旧镜像（网关不改写 Host）→ 升级镜像；或显式把 `PUBLIC_HOST` 设成你访问用的 `host:port` |
+| 每个 API 都 403 | `PUBLIC_HOST` 与浏览器地址不一致（含端口）；改成浏览器实际地址 |
+| 容器启动即退出，exit 64 | `PUBLIC_HOST` 是空/占位 `192.168.1.1`/回环 → 按日志里的候选地址填 |
 | bash 工具报 `SANDBOX_UNAVAILABLE` | 少了 `cap_add: SYS_ADMIN` 或 `apparmor=unconfined`；或宿主 `kernel.apparmor_restrict_unprivileged_userns=1` |
 | 插件没生效 | `docker logs dsh-web | grep plugins`；`enabled.txt` 是否列了该目录 |
 | 补丁冲突导致构建失败 | 插件升级了，按提示重新生成 `patches/0002-*.patch` |
