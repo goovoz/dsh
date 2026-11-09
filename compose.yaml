@@ -1,25 +1,23 @@
-# DSH Web —— 浏览器访问的 DeepSeekRuntime（容器部署）
+# DSH Web —— 浏览器访问的 DeepSeekRuntime（运行编排，只管「跑哪个镜像」）
 #
-# 两条路都能起：
-#   1) make build && make up          本地构建（IMAGE_TAG 由 Makefile 注入，带 -plugins 后缀也一致）
-#   2) docker compose up -d           直接拉发布镜像（默认 ghcr.io/goovoz/dsh:latest，多架构）
+# 构建不在这里：
+#   make build                    本地构建（tag: dsh-web:<ver>[-plugins]）
+#   make ghcr                     多架构构建并推送 GHCR
+#   想用 compose 构建：docker compose -f compose.yaml -f compose.build.yaml build
+#
+# 运行：
+#   make up                       用本地构建的镜像（Makefile 注入 IMAGE_TAG）
+#   docker compose up -d          用发布镜像（默认 ghcr.io/goovoz/dsh:latest，多架构）
 services:
   dsh-web:
-    build:
-      context: .
-      args:
-        DSH_VERSION: ${DSH_VERSION:-0.2.2-rc.1}
-        WITH_EXTRAS: ${WITH_EXTRAS:-1}
-        WITH_PLUGINS: ${WITH_PLUGINS:-0}
-    # 默认指向已发布的多架构镜像；make up 会注入本地构建出的完整 tag
     image: ${IMAGE_TAG:-ghcr.io/goovoz/dsh:latest}
     container_name: ${CONTAINER_NAME:-dsh-web}
     restart: unless-stopped
     ports:
       - "${DSH_PORT:-8899}:8899"
     environment:
-      # 浏览器实际访问的 authority（含端口）；cookie 按它签名，改了要一起改
-      PUBLIC_HOST: ${PUBLIC_HOST:-}   # 可留空：网关按来访 Host 自动适配
+      # 可留空：网关按来访 Host 自动适配；显式设置则固定为该 authority
+      PUBLIC_HOST: ${PUBLIC_HOST:-}
       HOME: /data/workspace
       DSH_HOME: /data/dsh
       DSH_WORKSPACE: /data/workspace

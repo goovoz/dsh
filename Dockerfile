@@ -37,6 +37,7 @@ COPY extras.txt /opt/dsh/extras.txt
 COPY capture.mjs gateway.mjs entrypoint.sh /opt/dsh/
 RUN chmod +x /opt/dsh/entrypoint.sh /opt/dsh/scripts/*.sh
 
+# 注意：下面这行用了 RUN --mount，需要 BuildKit（Docker 23+ 默认开启；DOCKER_BUILDKIT=0 会失败）
 # 第三方插件：默认**不集成**。WITH_PLUGINS=1 时才把 plugins/ 拷进镜像并在构建期打补丁。
 RUN --mount=type=bind,source=plugins,target=/tmp/plugins \
     --mount=type=bind,source=patches,target=/tmp/patches \
@@ -46,6 +47,11 @@ RUN --mount=type=bind,source=plugins,target=/tmp/plugins \
     else \
       echo "[build] 第三方插件未集成（WITH_PLUGINS=0）"; \
     fi
+
+LABEL org.opencontainers.image.title="dsh-web" \
+      org.opencontainers.image.description="DeepSeekRuntime (DSH) in a container, browser UI, upstream-tracking" \
+      org.opencontainers.image.source="https://github.com/goovoz/dsh" \
+      org.opencontainers.image.licenses="MIT"
 
 EXPOSE 8899
 ENTRYPOINT ["/usr/bin/tini","--","/opt/dsh/entrypoint.sh"]

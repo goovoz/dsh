@@ -1,0 +1,14 @@
+# 可选：用 compose 构建本地镜像（与 compose.yaml 叠加使用）
+#   docker compose -f compose.yaml -f compose.build.yaml build
+#   IMAGE_TAG=dsh-web:local docker compose -f compose.yaml -f compose.build.yaml up -d
+services:
+  dsh-web:
+    # 本地构建产物默认叫 dsh-web:local，避免和发布镜像 ghcr.io/goovoz/dsh:* 同名混淆
+    image: ${IMAGE_TAG:-dsh-web:local}
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        DSH_VERSION: ${DSH_VERSION:-0.2.2-rc.1}
+        WITH_EXTRAS: ${WITH_EXTRAS:-1}
+        WITH_PLUGINS: ${WITH_PLUGINS:-0}

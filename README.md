@@ -114,7 +114,8 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 | 路径 | 作用 |
 |---|---|
 | `Dockerfile` | node:24-bookworm-slim + dsh + pnpm + bubblewrap + python3；构建期打补丁 |
-| `compose.yaml` | 端口、卷、`cap_add: SYS_ADMIN`、`apparmor/seccomp unconfined` |
+| `compose.yaml` | 只管运行：镜像、端口、卷、`cap_add: SYS_ADMIN`、`apparmor/seccomp unconfined` |
+| `compose.build.yaml` | 可选叠加：用 compose 构建本地镜像（`make build-compose`） |
 | `entrypoint.sh` | 装 extras → 装插件 → 起网关 → 守护 `dsh --profile web` |
 | `gateway.mjs` | 零依赖反代：无 cookie 时用 launch token 换 cookie，HTTP + WebSocket 直通 |
 | `capture.mjs` | 从启动日志抓 43 字符 launch token 落到 `/run/dsh/launch-token` |
@@ -131,6 +132,8 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 | `DSH_VERSION` | `package.json#dshVersion` | 构建参数，决定装哪版 `@deepseek-ai/dsh` |
 | `PUBLIC_HOST` | 空（自动） | 可选。留空时用内部 authority `dsh.internal` + 网关改写，任意地址可访问；显式设置则沿用该 authority |
 | `DSH_PORT` | `8899` | 宿主机端口 |
+| `IMAGE_TAG` | `ghcr.io/goovoz/dsh:latest` | 运行哪个镜像；`make up` 会自动注入本地构建 tag |
+| `CONTAINER_NAME` | `dsh-web` | 容器名（多套并存时改它） |
 | `WITH_EXTRAS` / `DSH_EXTRAS` | `1` | 是否安装 `extras.txt` 里的插件组 |
 | `TZ` | `Asia/Shanghai` | 时区 |
 

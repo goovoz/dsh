@@ -11,14 +11,16 @@ CONTAINER_NAME ?= dsh-web
 URL ?=
 NAME ?=
 
-.PHONY: help build build-arm64 up up-build down logs shell latest bump ghcr plugin-add plugin-update plugin-remove plugin-list
+.PHONY: help build build-arm64 build-compose up up-build up-pull down logs shell latest bump ghcr plugin-add plugin-update plugin-remove plugin-list
 
 help:
 	@echo "make build                      # 本地构建 amd64 镜像（$(IMAGE):$(DSH_VERSION)$(SUFFIX)，插件: $(if $(filter 1,$(PLUGINS)),集成,不集成)）"
 	@echo "make build PLUGINS=1            # 构建含第三方插件的镜像"
 	@echo "make build-arm64                # 本地构建 arm64 镜像（qemu）"
+	@echo "make build-compose              # 用 compose 叠加文件构建（tag: dsh-web:local）"
 	@echo "make up                         # 用本地镜像启动（需要 PUBLIC_HOST=host:port）"
 	@echo "make up-build                   # 先构建再启动"
+	@echo "make up-pull                    # 直接拉发布镜像并启动（不本地构建）"
 	@echo "make down / logs / shell        # 停止 / 日志 / 进容器"
 	@echo "make ghcr                       # 多架构构建并推送 $(GHCR)"
 	@echo "make plugin-add URL=<git-url>   # 把第三方插件加为 submodule 并启用"
@@ -47,10 +49,17 @@ up:
 	IMAGE_TAG=$(IMAGE):$(DSH_VERSION)$(SUFFIX) CONTAINER_NAME=$(CONTAINER_NAME) \
 	DSH_PORT=$(PORT) docker compose up -d
 
+build-compose:
+	docker compose -f compose.yaml -f compose.build.yaml build
+
 up-build: build
 	DSH_VERSION=$(DSH_VERSION) WITH_PLUGINS=$(PLUGINS) WITH_EXTRAS=$(EXTRAS) \
 	IMAGE_TAG=$(IMAGE):$(DSH_VERSION)$(SUFFIX) CONTAINER_NAME=$(CONTAINER_NAME) \
 	DSH_PORT=$(PORT) docker compose up -d
+
+up-pull:
+	CONTAINER_NAME=$(CONTAINER_NAME) DSH_PORT=$(PORT) docker compose pull && \
+	CONTAINER_NAME=$(CONTAINER_NAME) DSH_PORT=$(PORT) docker compose up -d
 
 down:
 	CONTAINER_NAME=$(CONTAINER_NAME) docker compose down
