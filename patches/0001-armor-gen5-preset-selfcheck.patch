@@ -1,0 +1,19 @@
+--- a/dsh-armor-gen5/index.js
++++ b/dsh-armor-gen5/index.js
+@@ -587,7 +587,15 @@
+   add("preset-patch", (() => {
+     try {
+       const home = process.env.DSH_HOME || join(homedir(), ".dsh");
+-      const patch = readFileSync(join(home, "profiles", "desktop", "cordis.patch.yml"), "utf8");
++      const patch = ["web", "desktop"]
++        .map((name) => {
++          try {
++            return readFileSync(join(home, "profiles", name, "cordis.patch.yml"), "utf8");
++          } catch {
++            return "";
++          }
++        })
++        .join("\n");
+       return /id:\s*preset-armor\b/.test(patch) && /@deepseek-ai\/dsh-agent-preset/.test(patch);
+     } catch (error) {
+       return false;

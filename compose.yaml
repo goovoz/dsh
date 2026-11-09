@@ -1,0 +1,32 @@
+services:
+  dsh-web:
+    build:
+      context: .
+      args:
+        DSH_VERSION: ${DSH_VERSION:-0.2.2-rc.1}
+        WITH_EXTRAS: ${WITH_EXTRAS:-1}
+    image: dsh-web:${DSH_VERSION:-latest}
+    container_name: dsh-web
+    restart: unless-stopped
+    ports:
+      - "${DSH_PORT:-8899}:8899"
+    environment:
+      # 浏览器实际访问的 authority（含端口）；cookie 按它签名，改了要一起改
+      PUBLIC_HOST: ${PUBLIC_HOST:-127.0.0.1:8899}
+      HOME: /data/workspace
+      DSH_HOME: /data/dsh
+      DSH_WORKSPACE: /data/workspace
+      DSH_EXTRAS: ${WITH_EXTRAS:-1}
+      TZ: ${TZ:-Asia/Shanghai}
+    env_file:
+      - path: ./secrets.env
+        required: false
+    volumes:
+      - ./data:/data
+    # bubblewrap 沙箱需要：解除 apparmor 的 userns 限制 + 允许创建命名空间
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
+    cap_add:
+      - SYS_ADMIN
+    stop_grace_period: 20s

@@ -1,0 +1,8 @@
+{
+  "name": "dsh-web-deploy",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Browser-accessible DeepSeekRuntime (DSH) in Docker: upstream-tracking, plugin library, preset-patch fix.",
+  "dshVersion": "0.2.2-rc.1",
+  "license": "MIT"
+}

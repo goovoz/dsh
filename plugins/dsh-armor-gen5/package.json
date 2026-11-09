@@ -1,0 +1,68 @@
+{
+  "name": "dsh-armor-gen5",
+  "version": "0.3.0",
+  "description": "DeepSeek Harness 插件「无限五代 破甲」：把「破甲模式」注册为可选 agent preset，为选中该预设的会话追加 FLASH-FORGE v9.1 系统提示（首字门 + 回归测试语境 + 思考槽封口 + 反制路由）、W5 自我博弈再锚定、T4 证据链预热、prompt-inject.md 身份层注入 + 提示词权威性声明；未选中预设的会话零注入。",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "preset-rows.js",
+    "normalize.js",
+    "preheat.js",
+    "runtime.js",
+    "prompt-pack.js",
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "install.ps1",
+    "uninstall.ps1",
+    "restore-bundles.ps1",
+    "HARNESS_PLUGIN.md",
+    "README.md",
+    "CHANGELOG.md",
+    "HANDOFF.md",
+    "PROMPT_PACKS.md",
+    "安装说明.md",
+    "INSTALL.md",
+    "tools",
+    "prompts",
+    "LICENSE"
+  ],
+  "scripts": {
+    "harness:check": "node --check index.js && node --check client.js",
+    "test": "node tools/test-packs.mjs && node tools/render-smoke.mjs && node tools/selftest.mjs",
+    "test:packs": "node tools/test-packs.mjs",
+    "test:render": "node tools/render-smoke.mjs"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "agent-preset",
+    "prompt",
+    "armor"
+  ],
+  "license": "SEE LICENSE IN LICENSE",
+  "engines": {
+    "node": ">=20",
+    "dsh": ">=0.2.1-0"
+  },
+  "dsh": {
+    "id": "dsh-armor-gen5",
+    "name": "无限五代 破甲",
+    "version": "0.3.0",
+    "repo": "https://github.com/Minglink/dsh-armor-gen5",
+    "permissions": "系统提示词注入（仅 armor 预设）, 客户端状态条, 会话投影, 再锚定顾问, prompt-inject 注入",
+    "client": {
+      "platform": "web",
+      "immediately": true
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

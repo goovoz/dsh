@@ -1,0 +1,10 @@
+# dsh-armor-gen5 bundle patch
+#
+# 只挂插件本体（server + client 半体）。
+# 「破甲模式」预设由 profile patch 声明（node tools/gen-bundle-patch.mjs --print-preset 输出）：
+# agent-preset-registry 在 web-app 的 entry-local realm 内，bundle 层的 sibling 行看不到它。
+#
+# 本文件由 tools/gen-bundle-patch.mjs 生成，勿手改。
+- insert:
+    - id: dsh-armor-gen5
+      name: dsh-armor-gen5

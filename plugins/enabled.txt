@@ -1,0 +1,3 @@
+# 仅当 WITH_PLUGINS=1 / DSH_PLUGINS=1 时才按本清单安装
+# 每行一个要装进镜像并启用的插件目录名（对应 plugins/<name>）
+dsh-armor-gen5

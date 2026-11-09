@@ -1,0 +1,10 @@
+# 桌面端等价插件组（DSH_EXTRAS=1 时安装；版本优先跟随 DSH_VERSION，缺失时回退 latest）
+# 一行一个 npm 包名，# 开头为注释
+@deepseek-ai/dsh-experimental-terminal-bundle
+@deepseek-ai/dsh-experimental-session-search
+@deepseek-ai/dsh-experimental-session-titles-bundle
+@deepseek-ai/dsh-experimental-ralph-bundle
+@deepseek-ai/dsh-experimental-plugin-market-bundle
+@deepseek-ai/dsh-experimental-cot-translation-bundle
+@deepseek-ai/dsh-experimental-tool-worktree
+@deepseek-ai/dsh-experimental-auto-review

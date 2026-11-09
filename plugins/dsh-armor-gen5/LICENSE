@@ -1,0 +1,67 @@
+无限五代 破甲（dsh-armor-gen5）非商业软件许可协议
+MingLin Non-Commercial Software License
+版本 1.0 — 2026-11-06
+
+版权所有 (c) 2026 MingLin
+原项目仓库：https://github.com/Minglink/dsh-armor-gen5
+
+本协议不是开源协议。本软件源码公开仅供学习、研究与个人使用，
+一切权利归 MingLin 所有。使用、复制、修改或分发本软件即表示
+接受本协议全部条款。
+
+一、授权范围
+
+在遵守本协议全部条款的前提下，MingLin 授予你免费的、不可转让的：
+
+1. 使用本软件的权利（个人学习、研究与非商业用途）；
+2. 为个人学习与研究目的复制、修改本软件（"二次开发"）的权利；
+3. 在完整遵守第二条、第三条的前提下分发本软件或其衍生作品的权利。
+
+二、禁止商业使用
+
+1. 未经 MingLin 事先书面许可，不得将本软件或其衍生作品用于任何
+   直接或间接的商业目的，包括但不限于：出售、出租、收费许可、
+   捆绑进商业产品销售、付费服务、商业部署或任何以盈利为目的的使用。
+2. 商业授权需单独取得。联系方式见原项目仓库。
+
+三、二次开发强制条款：署名与来源标识
+
+1. 任何二次开发、修改或衍生作品必须原样保留以下全部内容，
+   不得删除、遮挡或改写：
+   a. 本协议全文；
+   b. 版权声明 "Copyright (c) 2026 MingLin"；
+   c. 原项目名称 dsh-armor-gen5；
+   d. 原项目仓库地址 https://github.com/Minglink/dsh-armor-gen5
+2. 衍生作品必须在显著位置（README、关于页或源码头文件）注明：
+   原作者 MingLin 及原项目仓库地址，并明确区分原创部分与二开部分。
+3. 不得声称或暗示原始项目为二次开发者所作，不得移除或混淆
+   上述署名与仓库标识。
+
+四、再分发
+
+分发本软件或衍生作品时，必须附带本协议全文，且接收方同样受
+本协议全部条款约束。禁止以任何与本协议冲突的附加条款再分发。
+
+五、免责声明
+
+本软件按"现状"提供，不附带任何明示或默示的担保，包括但不限于
+适销性、特定用途适用性与不侵权的担保。MingLin 不对因使用或
+无法使用本软件而产生的任何损失、损害或索赔承担责任。
+
+六、终止
+
+违反本协议任一条款，授权即自动终止，须立即停止使用并删除
+全部副本。第三条署名义务在授权终止后继续有效。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+English Summary (the Chinese text above is the binding version)
+
+Copyright (c) 2026 MingLin. NOT an open-source license.
+Source-available for personal study, research and non-commercial use only.
+Commercial use requires prior written permission from MingLin.
+Any modification or derivative work MUST keep this license, the copyright
+notice "MingLin", the original project name "dsh-armor-gen5" and the
+repository URL https://github.com/Minglink/dsh-armor-gen5 intact, and must
+prominently credit MingLin as the original author.
+Provided as-is, without warranty of any kind.

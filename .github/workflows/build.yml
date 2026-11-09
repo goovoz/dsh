@@ -1,0 +1,76 @@
+name: build
+
+on:
+  push:
+    branches: [master]
+    tags: ['dsh-*']
+  schedule:
+    - cron: '0 3 * * 1'      # 每周一 03:00 UTC 检查上游并构建
+  workflow_dispatch:
+    inputs:
+      with_plugins:
+        description: '集成第三方插件（plugins/，构建带 -plugins 后缀的镜像）'
+        type: boolean
+        default: false
+      release:
+        description: '创建 GitHub Release'
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve versions
+        id: v
+        run: |
+          pinned=$(node -p "require('./package.json').dshVersion")
+          upstream=$(npm view @deepseek-ai/dsh version)
+          plugins=${{ (inputs.with_plugins && '1') || '0' }}
+          suffix=$([ "$plugins" = "1" ] && echo -n '-plugins')
+          echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
+          echo "upstream=$upstream" >> "$GITHUB_OUTPUT"
+          echo "plugins=$plugins" >> "$GITHUB_OUTPUT"
+          echo "suffix=$suffix" >> "$GITHUB_OUTPUT"
+          echo "pinned=$pinned upstream=$upstream plugins=$plugins"
+
+      - name: Build image
+        run: |
+          docker build \
+            --build-arg DSH_VERSION=${{ steps.v.outputs.pinned }} \
+            --build-arg WITH_PLUGINS=${{ steps.v.outputs.plugins }} \
+            -t ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }} .
+
+      - name: Smoke test
+        run: |
+          docker run --rm --entrypoint dsh ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }} --version
+          if [ "${{ steps.v.outputs.plugins }}" = "0" ]; then
+            docker run --rm --entrypoint sh ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }} -lc 'test -z "$(ls -A /opt/plugins)" && echo "no plugins bundled: ok"'
+          fi
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push GHCR
+        run: |
+          IMG=ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}
+          docker push "$IMG"
+          if [ "${{ steps.v.outputs.plugins }}" = "1" ]; then docker tag "$IMG" ghcr.io/${{ github.repository_owner }}/dsh:latest-plugins; docker push ghcr.io/${{ github.repository_owner }}/dsh:latest-plugins;
+          else docker tag "$IMG" ghcr.io/${{ github.repository_owner }}/dsh:latest; docker push ghcr.io/${{ github.repository_owner }}/dsh:latest; fi
+
+      - name: Release
+        if: ${{ (inputs.release || startsWith(github.ref, 'refs/tags/dsh-')) && github.event_name != 'pull_request' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="dsh-${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
+          NOTES="DSH ${{ steps.v.outputs.pinned }} web image (plugins: ${{ steps.v.outputs.plugins == '1' && 'integrated' || 'none' }})
+
+          docker pull ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "release $TAG exists"; else gh release create "$TAG" --title "$TAG" --notes "$NOTES"; fi
