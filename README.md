@@ -144,6 +144,14 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 
 ## 配置优先级与便捷项
 
+| 变量 | 必填 | 作用 |
+|---|---|---|
+| `PUBLIC_HOST` | 是 | 定义 DSH 的 authority / 访问 URL / cookie 绑定；也可以给 `https://host/` 完整 URL |
+| `DSH_ALLOW_LOOPBACK` | 否（默认 0） | 只放宽校验：允许 `PUBLIC_HOST` 填 `127.0.0.1`；**不替代** `PUBLIC_HOST` |
+
+> DSH_ALLOW_LOOPBACK 与 PUBLIC_HOST 的关系：前者是「校验开关」，后者是「实际地址」。
+> 本机自测要两个一起用：`PUBLIC_HOST=127.0.0.1:8899 DSH_ALLOW_LOOPBACK=1 make up`；只设后者会按「PUBLIC_HOST 为空」拒绝启动。
+
 - 变量来源：命令行环境 > `.env`（Makefile 自动 `include`）> compose 默认值；
 - `PUBLIC_HOST` 支持带 scheme 的完整 URL，`--public-url` 会跟着用 `https://`；
 - 启动失败（配置错误）退出码 64，compose 用 `restart: on-failure:5`，不会无限重启；
