@@ -39,7 +39,7 @@ PUBLIC_HOST="${RAW_HOST}"
 
 case "${PUBLIC_HOST}" in
   '') fail "为空（required）" ;;
-  ${PLACEHOLDER}|${PLACEHOLDER}:*) fail "还是占位默认值 ${PUBLIC_HOST}，请改成真实地址" ;;
+  ${PLACEHOLDER}|${PLACEHOLDER}:*) fail "还是占位默认值 ${PUBLIC_HOST}（占位地址永远不接受，请换成宿主机 IP 或域名；本机自测用 127.0.0.1:${PORT} 并设 DSH_ALLOW_LOOPBACK=1）" ;;
   127.*|localhost|localhost:*|0.0.0.0|0.0.0.0:*|'[::1]'|'[::1]':*)
     if [ "${DSH_ALLOW_LOOPBACK:-0}" = "1" ]; then
       echo "[entrypoint] ⚠ PUBLIC_HOST=${PUBLIC_HOST} 是回环地址（DSH_ALLOW_LOOPBACK=1 已放行，仅本机可用）"

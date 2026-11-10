@@ -18,7 +18,8 @@ services:
       - "${DSH_PORT:-8899}:8899"
     environment:
       # 【必填】浏览器实际访问的 host[:port]（也接受 https://host/ 这种完整 URL，入口会拆出 scheme）
-      # 默认 192.168.1.1:8899 只是占位：不改会 exit 64 并打印候选地址
+      # 这里故意用 192.168.1.1:8899 作占位：它不是可用地址，入口会直接拒绝并 exit 64，提醒你改成真实值。
+      # 真实值举例：192.168.1.10:8899（宿主机局域网 IP） / app.example.com（反代域名）
       PUBLIC_HOST: ${PUBLIC_HOST:-192.168.1.1:8899}
       HOME: /data/workspace
       DSH_HOME: /data/dsh
@@ -28,8 +29,10 @@ services:
       # 这里不写 DSH_PLUGINS，避免把 -plugins 镜像的默认值覆盖成 0；要覆盖就显式传：
       #   DSH_PLUGINS=0 docker compose up -d
       DSH_EXTRAS: ${DSH_EXTRAS:-1}
-      # 【可选，默认 0】只放宽上面那条校验：置 1 后允许 PUBLIC_HOST 填回环地址（127.0.0.1 / localhost）。
-      # 它不替代 PUBLIC_HOST——本机自测同样要写 PUBLIC_HOST=127.0.0.1:<端口>，否则仍按「为空」拒绝。
+      # 【可选，默认 0】只放宽上面那条「回环地址拒绝」：置 1 后才允许 PUBLIC_HOST 用 127.0.0.1 / localhost。
+      # 与上面的占位值无关：192.168.1.1 无论这个开关是 0 还是 1 都会被拒绝。
+      # 本机自测的完整写法是两者一起给：PUBLIC_HOST=127.0.0.1:<端口> + DSH_ALLOW_LOOPBACK=1
+      # （PUBLIC_HOST 仍然必填，不能只设这个开关。）
       # 必须在此声明，否则宿主 env（shell / .env）不会传进容器。
       DSH_ALLOW_LOOPBACK: ${DSH_ALLOW_LOOPBACK:-0}
       TZ: ${TZ:-Asia/Shanghai}

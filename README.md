@@ -149,6 +149,9 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 | `PUBLIC_HOST` | 是 | 定义 DSH 的 authority / 访问 URL / cookie 绑定；也可以给 `https://host/` 完整 URL |
 | `DSH_ALLOW_LOOPBACK` | 否（默认 0） | 只放宽校验：允许 `PUBLIC_HOST` 填 `127.0.0.1`；**不替代** `PUBLIC_HOST` |
 
+> 三个地址的角色：`192.168.1.1:8899` 是**故意不可用的占位**（永远被拒绝）；`127.0.0.1:<端口>` 只在 `DSH_ALLOW_LOOPBACK=1` 时允许；
+> 真实部署填宿主机局域网 IP 或域名（这两个开关对它没有影响）。
+>
 > DSH_ALLOW_LOOPBACK 与 PUBLIC_HOST 的关系：前者是「校验开关」，后者是「实际地址」。
 > 本机自测要两个一起用：`PUBLIC_HOST=127.0.0.1:8899 DSH_ALLOW_LOOPBACK=1 make up`；只设后者会按「PUBLIC_HOST 为空」拒绝启动。
 
