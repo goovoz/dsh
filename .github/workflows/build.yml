@@ -88,26 +88,31 @@ jobs:
 
       - name: Smoke test container (gateway + PUBLIC_HOST guard)
         run: |
-          IMG="ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
-          # 占位 PUBLIC_HOST 必须被拒绝（exit 64）
+          set -u
+          OWNER=${{ github.repository_owner }}
+          VER=${{ steps.v.outputs.pinned }}
+          SUF=${{ steps.v.outputs.suffix }}
+          IMG="ghcr.io/$OWNER/dsh:$VER$SUF"
+          # 1) 占位 PUBLIC_HOST 必须被拒绝（exit 64，且不会无限重启）
           set +e
           docker run --rm --platform linux/amd64 -e PUBLIC_HOST=192.168.1.1:8899 "$IMG" >/tmp/guard.log 2>&1
           rc=$?
           set -e
-          test "$rc" = "64" && echo 'placeholder rejected: ok' || { cat /tmp/guard.log; exit 1; }
-          # 正确配置下网关应返回 302（自动登录跳转）
-          docker run -d --name smoke --platform linux/amd64 -p 18899:8899 \\
-            -e PUBLIC_HOST=127.0.0.1:18899 -e DSH_ALLOW_LOOPBACK=1 -e DSH_EXTRAS=0 "$IMG"
+          if [ "$rc" != "64" ]; then echo "placeholder PUBLIC_HOST 未被拒绝: rc=$rc"; cat /tmp/guard.log; exit 1; fi
+          echo "placeholder rejected: ok"
+          # 2) 正确配置下网关返回 302（自动登录跳转）
+          docker rm -f smoke >/dev/null 2>&1 || true
+          docker run -d --name smoke --platform linux/amd64 -p 18899:8899 -e PUBLIC_HOST=127.0.0.1:18899 -e DSH_ALLOW_LOOPBACK=1 -e DSH_EXTRAS=0 "$IMG" >/dev/null
           code=000
           for i in $(seq 1 45); do
             code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18899/ || true)
-            [ "$code" = "302" ] && break
+            if [ "$code" = "302" ]; then break; fi
             sleep 2
           done
-          docker logs smoke | tail -5 || true
+          docker logs smoke 2>&1 | tail -5 || true
           docker rm -f smoke >/dev/null 2>&1 || true
           echo "gateway=$code"
-          test "$code" = "302"
+          if [ "$code" != "302" ]; then echo "网关未返回 302"; exit 1; fi
 
       - name: Tag dsh-<ver>[-plugins] if new
         id: tag
