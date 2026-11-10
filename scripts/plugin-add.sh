@@ -17,10 +17,6 @@ if [ -e "plugins/${NAME}" ]; then
   echo "plugins/${NAME} 已存在（先用 git submodule status 确认）" >&2
   exit 1
 fi
-if [ -f plugins/${NAME}/package.json ]; then
-  echo "plugins/${NAME} 已作为普通目录存在" >&2
-  exit 1
-fi
 
 git submodule add "$URL" "plugins/$NAME"
 if ! grep -qx "$NAME" plugins/enabled.txt; then

@@ -14,7 +14,7 @@ for p in "$PATCHES"/*.patch; do
   elif patch -p1 -d "$PLUGINS" -R --dry-run < "$p" >/dev/null 2>&1; then
     echo "[patch] already applied $name"
   else
-    echo "[patch] CONFLICT $name（插件版本变了？先跑 make refresh-patches）" >&2
+    echo "[patch] CONFLICT $name（插件版本变了？按 plugins/README 重新生成）" >&2
     exit 1
   fi
 done

@@ -12,11 +12,13 @@ services:
   dsh-web:
     image: ${IMAGE_TAG:-ghcr.io/goovoz/dsh:latest}
     container_name: ${CONTAINER_NAME:-dsh-web}
-    restart: unless-stopped
+    # 配置错误会 exit 64：用 on-failure 而不是 unless-stopped，避免占位 PUBLIC_HOST 触发无限重启
+    restart: on-failure:5
     ports:
       - "${DSH_PORT:-8899}:8899"
     environment:
-      # 必填：浏览器实际访问的 host[:port]（含端口）。默认值只是占位，容器会拒绝启动并提示你改
+      # 必填：浏览器实际访问的 host[:port]（也接受带 scheme 的完整 URL，入口会拆分）
+      # 默认值只是占位，容器会拒绝启动并提示你改
       PUBLIC_HOST: ${PUBLIC_HOST:-192.168.1.1:8899}
       HOME: /data/workspace
       DSH_HOME: /data/dsh
@@ -26,6 +28,8 @@ services:
       # 这里不写 DSH_PLUGINS，避免把 -plugins 镜像的默认值覆盖成 0；要覆盖就显式传：
       #   DSH_PLUGINS=0 docker compose up -d
       DSH_EXTRAS: ${DSH_EXTRAS:-1}
+      # 本机自测放行回环地址（必须在此声明，否则宿主 env 传不进容器）
+      DSH_ALLOW_LOOPBACK: ${DSH_ALLOW_LOOPBACK:-0}
       TZ: ${TZ:-Asia/Shanghai}
     # compose >= 2.24 才支持 path/required 写法；老版本请删掉这段，改用 --env-file
     env_file:
@@ -39,4 +43,15 @@ services:
       - apparmor=unconfined
     cap_add:
       - SYS_ADMIN
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://127.0.0.1:8899/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 180s   # 首次启动要下载 extras，给足时间
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
     stop_grace_period: 20s

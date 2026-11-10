@@ -24,7 +24,7 @@ PUBLIC_HOST=192.168.1.10:8899 make up
 
 浏览器打开 `http://<本机IP>:<端口>/` 即可，无需点带 token 的链接。
 
-> `PUBLIC_HOST` **必填**，必须等于浏览器实际访问的 `host[:port]`（含端口）。compose 里的默认值 `192.168.1.1:8899` 只是占位，
+> `PUBLIC_HOST` **必填**，必须等于浏览器实际访问的 `host[:port]`（含端口）；也接受完整 URL（`https://app.example.com/`，入口会拆出 scheme）。compose 里的默认值 `192.168.1.1:8899` 只是占位，
 > 容器发现是占位值/回环/空值会**直接退出并打印候选地址**（exit 64）。本机自测可用 `PUBLIC_HOST=127.0.0.1:8899 DSH_ALLOW_LOOPBACK=1`。
 
 ## 随上游更新（自动）
@@ -133,7 +133,7 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 | `PUBLIC_HOST` | `192.168.1.1:8899`（占位） | **必填**：浏览器实际访问的 `host[:port]`；占位/回环/空值会被拒绝启动（exit 64） |
 | `DSH_PLUGINS` | 随镜像：普通镜像 `0`，`-plugins` 镜像 `1` | **运行期**开关：1 = 把镜像里 `/opt/plugins` 的插件装进 profile。构建期对应参数叫 `WITH_PLUGINS` |
 | `DSH_EXTRAS` | `1` | **运行期**开关：1 = 安装 `extras.txt` 里的桌面等价插件组（构建期对应 `WITH_EXTRAS`） |
-| `DSH_ALLOW_LOOPBACK` | `0` | 置 1 时放行 `127.0.0.1` 作为 PUBLIC_HOST（仅本机自测） |
+| `DSH_ALLOW_LOOPBACK` | `0` | 置 1 时放行 `127.0.0.1` 作为 PUBLIC_HOST（仅本机自测）；compose 已透传 |
 | `DSH_PORT` | `8899` | 宿主机端口 |
 | `IMAGE_TAG` | `ghcr.io/goovoz/dsh:latest` | 运行哪个镜像；`make up` 会自动注入本地构建 tag |
 | `CONTAINER_NAME` | `dsh-web` | 容器名（多套并存时改它） |
@@ -141,6 +141,13 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 | `TZ` | `Asia/Shanghai` | 时区 |
 
 数据都在 `./data`：备份 `tar czf dsh-data.tgz -C . data`；凭据在 `data/dsh/.credentials.yaml`（注意权限）。
+
+## 配置优先级与便捷项
+
+- 变量来源：命令行环境 > `.env`（Makefile 自动 `include`）> compose 默认值；
+- `PUBLIC_HOST` 支持带 scheme 的完整 URL，`--public-url` 会跟着用 `https://`；
+- 启动失败（配置错误）退出码 64，compose 用 `restart: on-failure:5`，不会无限重启；
+- 镜像自带 `HEALTHCHECK`（curl 8899），compose 也配了 healthcheck 与日志轮转（20m×5）。
 
 ## 架构
 

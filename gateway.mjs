@@ -108,6 +108,8 @@ const server = http.createServer((req, res) => {
     if (!res.headersSent) res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' })
     res.end('backend unavailable: ' + err.message + '\n')
   })
+  req.on('error', () => upstream.destroy())
+  res.on('error', () => {})
   req.pipe(upstream)
 })
 
@@ -134,6 +136,8 @@ server.on('upgrade', (req, socket, head) => {
   upstream.on('error', () => socket.destroy())
   socket.on('error', () => upstream.destroy())
 })
+
+server.on('clientError', (_err, socket) => socket.destroy())
 
 server.listen(LISTEN, '0.0.0.0', () => {
   console.log(`[gateway] http://0.0.0.0:${LISTEN} -> ${BACKEND.host}:${BACKEND.port}`

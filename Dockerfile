@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 # 上游 runtime：一条 npm 版本决定一切
-RUN npm i -g pnpm@10 "@deepseek-ai/dsh@${DSH_VERSION}" \
+RUN test -n "${DSH_VERSION}" && npm i -g pnpm@10 "@deepseek-ai/dsh@${DSH_VERSION}" \
  && dsh --version
 
 ENV DSH_HOME=/data/dsh \
@@ -52,6 +52,9 @@ LABEL org.opencontainers.image.title="dsh-web" \
       org.opencontainers.image.description="DeepSeekRuntime (DSH) in a container, browser UI, upstream-tracking" \
       org.opencontainers.image.source="https://github.com/goovoz/dsh" \
       org.opencontainers.image.licenses="MIT"
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=180s --retries=3 \
+  CMD curl -fsS -o /dev/null http://127.0.0.1:8899/ || exit 1
 
 EXPOSE 8899
 ENTRYPOINT ["/usr/bin/tini","--","/opt/dsh/entrypoint.sh"]

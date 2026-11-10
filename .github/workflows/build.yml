@@ -86,6 +86,29 @@ jobs:
           IMG="ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
           docker run --rm --platform linux/arm64 --entrypoint sh "$IMG" -lc "uname -m; dsh --version"
 
+      - name: Smoke test container (gateway + PUBLIC_HOST guard)
+        run: |
+          IMG="ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
+          # 占位 PUBLIC_HOST 必须被拒绝（exit 64）
+          set +e
+          docker run --rm --platform linux/amd64 -e PUBLIC_HOST=192.168.1.1:8899 "$IMG" >/tmp/guard.log 2>&1
+          rc=$?
+          set -e
+          test "$rc" = "64" && echo 'placeholder rejected: ok' || { cat /tmp/guard.log; exit 1; }
+          # 正确配置下网关应返回 302（自动登录跳转）
+          docker run -d --name smoke --platform linux/amd64 -p 18899:8899 \\
+            -e PUBLIC_HOST=127.0.0.1:18899 -e DSH_ALLOW_LOOPBACK=1 -e DSH_EXTRAS=0 "$IMG"
+          code=000
+          for i in $(seq 1 45); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:18899/ || true)
+            [ "$code" = "302" ] && break
+            sleep 2
+          done
+          docker logs smoke | tail -5 || true
+          docker rm -f smoke >/dev/null 2>&1 || true
+          echo "gateway=$code"
+          test "$code" = "302"
+
       - name: Tag dsh-<ver>[-plugins] if new
         id: tag
         run: |
