@@ -63,7 +63,7 @@ jobs:
           OWNER=${{ github.repository_owner }}
           VER=${{ steps.v.outputs.pinned }}
           SUF=${{ steps.v.outputs.suffix }}
-          if [ -n "$suffix" ]; then ALIAS=latest-plugins; else ALIAS=latest; fi
+          if [ -n "$SUF" ]; then ALIAS=latest-plugins; else ALIAS=latest; fi
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --build-arg DSH_VERSION="$VER" \
