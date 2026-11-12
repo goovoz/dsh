@@ -2,7 +2,7 @@
 import http from 'node:http';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
@@ -55,7 +55,7 @@ if (!existsSync(CLI)) {
   process.exit(1);
 }
 
-const mod = await import(join(ROOT, 'index.js'));
+const mod = await import(pathToFileURL(join(ROOT, 'index.js')).href);
 check('插件导出 name', mod.name === 'dsh-qinglong-cli', String(mod.name));
 check('插件 inject 含 tools', Array.isArray(mod.inject) && mod.inject.includes('tools'));
 
