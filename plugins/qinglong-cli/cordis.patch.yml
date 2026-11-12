@@ -1,0 +1,7 @@
+# dsh-qinglong-cli bundle patch
+#
+# 挂插件本体到 profile。容器场景由 dsh-install.sh 追加同一份配置（用 profile 内的相对路径），
+# 桌面场景可以直接靠这一份（name 走 npm 包名解析）。
+- insert:
+    - id: qinglong-cli
+      name: dsh-qinglong-cli

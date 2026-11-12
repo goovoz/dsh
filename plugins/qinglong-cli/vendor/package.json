@@ -1,0 +1,6 @@
+{
+  "name": "qinglong-cli-vendor",
+  "private": true,
+  "type": "commonjs",
+  "description": "官方 @whyour/qinglong-cli 的 npm bundle 是 CommonJS，这里单独声明作用域，避免被插件根 package.json 的 type=module 影响"
+}
