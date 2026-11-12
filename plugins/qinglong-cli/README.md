@@ -22,29 +22,40 @@
 | `qlcli_routes` | 拉全量路由表（约 148 条），确认操作对应哪个命令 |
 | `qlcli_status` | `ql auth status`，连通性与权限自检 |
 
+## 侧边栏面板
+
+插件带客户端半体（`client.js`），在 DSH 侧边栏注册「**青龙**」入口。点开是设置页：
+
+- 三个字段：`面板地址`、`Client ID`、`Client Secret`，**回填并显示真实值**（不脱敏，便于核对）
+- 「保存并生效」：写入配置文件 → 立刻重建 token/中转 → 顺带跑一次连通性探测，结果直接显示
+- 「测试连接」「重新读取」
+- 显示配置文件路径；若某项由环境变量提供，会标注「已被环境变量固定」
+
+背后是服务端注册的两条路由：
+
+| 方法 | 路径 | 说明 |
+|---|---|---|
+| GET | `/qinglong/config` | 返回 `settings`（真实值）、`locked`（哪些被 env 固定）、`settingsFile`、`ready` |
+| POST | `/qinglong/config` | 保存 `{qlUrl, clientId, clientSecret}` → 落盘 0600 → 立即生效 → 返回 `saved` + `probe` |
+| POST | `/qinglong/test` | 只测试连接，不改配置 |
+
+保存后不需要重启 DSH：`resetRuntime()` 会丢掉缓存的 relay 与 token，下一次工具调用自动用新配置。
+
 ## 配置
 
-环境变量优先，其次读配置文件：
+配置文件（面板保存就写这里）：
+
+- `$DSH_HOME/ql-cli.json`（容器里是 `/data/dsh/ql-cli.json`）
+- `~/.dsh/qinglong-cli.json`（桌面）
+- `QINGLONG_CLI_CONFIG` 指定的任意路径
+
+环境变量优先级更高（面板会标注 locked）：
 
 | 变量 | 说明 |
 |---|---|
 | `QL_URL` | 面板根地址，例如 `http://172.20.0.9:5700`；挂反代子路径时写 `https://example.com/ql`（不要带 `/open`，插件会自己拼） |
 | `QL_CLIENT_ID` / `QL_CLIENT_SECRET` | 面板「系统设置 → 应用设置」创建的应用凭据 |
 | `QL_CLI_PATH` | 可选，覆盖内置 `vendor/ql.js` |
-
-配置文件（二选一）：
-
-- `$DSH_HOME/ql-cli.json`
-- `~/.dsh/qinglong-cli.json`
-- `QINGLONG_CLI_CONFIG` 指定的任意路径
-
-```json
-{
-  "qlUrl": "http://172.20.0.9:5700",
-  "clientId": "xxxxxxxxxxxx",
-  "clientSecret": "yyyyyyyyyyyyyyyyyyyyyyyy"
-}
-```
 
 应用需要勾选要用的 scope：`crons`、`scripts`、`logs`、`envs`、`configs`、`subscriptions`、`dependencies`、`dashboard`。
 
@@ -99,19 +110,21 @@ qlcli { args:["api","request","GET","/open/crons/26"] }
 npm test
 ```
 
-两个用例，都不需要真实面板：
+三个用例，都不需要真实面板：
 
 - `tools/selftest.mjs`：mock 面板绑在 `127.0.0.1`（回环直通路径），覆盖 token、任务列表、脚本列表、帮助、路由表。
 - `tools/selftest-prefix.mjs`：mock 面板绑在 `127.0.0.2` 并挂在 `/ql` 子路径 —— `127.0.0.2` 不在回环白名单，强制走转发分支，断言中转地址保留前缀、上游收到 `/ql/open/*`、且没有裸 `/open` 请求。
+- `tools/selftest-config.mjs`：假 ctx 拿插件注册的 HTTP 路由，验证 `GET/POST /qinglong/config` 返回真实值（不脱敏）、落盘 0600、保存后无需重启即可用、环境变量存在时 `locked` 标记正确。
 
 ## 目录
 
 ```
-index.js             插件本体（relay + token + 4 个工具）
+index.js             服务端：relay + token + 4 个工具 + /qinglong/config|test 路由
+client.js            客户端：侧边栏「青龙」入口 + 设置页
 vendor/ql.js         官方 @whyour/qinglong-cli 0.1.4 的 npm bundle（Apache-2.0）
 cordis.patch.yml     插件自带 bundle patch
 dsh-install.sh       容器内后置安装（复制内核 + 写 profile patch）
-tools/selftest.mjs   离线自检
+tools/selftest*.mjs  三个离线自检
 ```
 
 `vendor/ql.js` 来源与校验值见 [PROVENANCE.md](vendor/PROVENANCE.md)。

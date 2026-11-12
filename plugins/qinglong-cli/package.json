@@ -1,15 +1,17 @@
 {
   "name": "dsh-qinglong-cli",
   "version": "0.1.0",
-  "description": "把官方 @whyour/qinglong-cli 接成 DSH 工具：qlcli / qlcli_help / qlcli_routes / qlcli_status（回环转发绕过 CLI 的回环限制，选项集自适应新旧命令）",
+  "description": "把官方 @whyour/qinglong-cli 接成 DSH 工具：qlcli / qlcli_help / qlcli_routes / qlcli_status；侧边栏「青龙」面板可设置 qlUrl 与 Client ID/Secret 并即时生效",
   "type": "module",
   "main": "index.js",
   "exports": {
     ".": "./index.js",
+    "./client": "./client.js",
     "./package.json": "./package.json"
   },
   "files": [
     "index.js",
+    "client.js",
     "cordis.patch.yml",
     "dsh-install.sh",
     "vendor",
@@ -17,8 +19,8 @@
     "README.md"
   ],
   "scripts": {
-    "harness:check": "node --check index.js",
-    "test": "node tools/selftest.mjs && node tools/selftest-prefix.mjs"
+    "harness:check": "node --check index.js && node --check client.js",
+    "test": "node tools/selftest.mjs && node tools/selftest-prefix.mjs && node tools/selftest-config.mjs"
   },
   "keywords": [
     "dsh",
@@ -38,7 +40,11 @@
     "name": "青龙 CLI 桥接",
     "version": "0.1.0",
     "repo": "https://github.com/goovoz/dsh",
-    "permissions": "访问青龙面板 OpenAPI（任务、脚本、环境变量、订阅等）；需要面板地址与应用 Client ID/Secret，凭据只从环境变量或本地配置读取，不落日志",
+    "permissions": "访问青龙面板 OpenAPI（任务、脚本、环境变量、订阅等）；需要面板地址与应用 Client ID/Secret，凭据从环境变量或本机配置文件读取，可在侧边栏面板里设置",
+    "client": {
+      "platform": "web",
+      "immediately": true
+    },
     "bundle": {
       "patch": "./cordis.patch.yml"
     }
