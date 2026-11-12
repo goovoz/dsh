@@ -59,11 +59,14 @@ if [ "${DSH_EXTRAS:-1}" = "1" ]; then
   /opt/dsh/scripts/install-extras.sh || echo "[entrypoint] extras 安装失败（继续启动）"
 fi
 
-if [ "${DSH_PLUGINS:-0}" = "1" ]; then
-  /opt/dsh/scripts/install-plugins.sh || echo "[entrypoint] 插件安装失败（继续启动）"
-else
-  echo "[entrypoint] 第三方插件未启用（DSH_PLUGINS=0）"
-fi
+# DSH_PLUGINS: all | 1 | 逗号列表 = 安装；none | 0 | 空 = 跳过
+case "$(printf '%s' "${DSH_PLUGINS:-0}" | tr 'A-Z' 'a-z')" in
+  0|none|'')
+    echo "[entrypoint] 第三方插件未启用（DSH_PLUGINS=${DSH_PLUGINS:-0}）" ;;
+  *)
+    echo "[entrypoint] 第三方插件: ${DSH_PLUGINS}"
+    /opt/dsh/scripts/install-plugins.sh || echo "[entrypoint] 插件安装失败（继续启动）" ;;
+esac
 
 node /opt/dsh/gateway.mjs &
 GATEWAY_PID=$!

@@ -49,8 +49,9 @@ jobs:
           set -u
           pinned=$(node -p "require('./package.json').dshVersion")
           upstream=$(npm view @deepseek-ai/dsh version)
-          plugins='${{ inputs.with_plugins && '1' || '0' }}'
-          case "$plugins" in 1) suffix="-plugins" ;; *) plugins=0; suffix="" ;; esac
+          plugins='${{ inputs.with_plugins && 'all' || 'none' }}'
+          suffix=$(bash scripts/resolve-plugins.sh suffix "$plugins")
+          case "$plugins" in all|1) plugins=all ;; *) plugins=none ;; esac
           { echo "pinned=$pinned"; echo "upstream=$upstream"; echo "plugins=$plugins"; echo "suffix=$suffix"; } >> "$GITHUB_OUTPUT"
           echo "pinned=$pinned upstream=$upstream plugins=$plugins"
 

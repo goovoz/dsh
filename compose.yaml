@@ -28,7 +28,7 @@ services:
       DSH_HOME: /data/dsh
       DSH_WORKSPACE: /data/workspace
       # 运行期开关，默认交给镜像内置值：
-      #   -plugins 镜像内置 DSH_PLUGINS=1、DSH_EXTRAS=1；普通镜像内置 0 / 1
+      #   -plugins 镜像内置 DSH_PLUGINS=<插件列表或 all>、DSH_EXTRAS=1；none 镜像内置 0 / 1
       # 这里不写 DSH_PLUGINS，避免把 -plugins 镜像的默认值覆盖成 0；要覆盖就显式传：
       #   DSH_PLUGINS=0 docker compose up -d
       DSH_EXTRAS: ${DSH_EXTRAS:-1}

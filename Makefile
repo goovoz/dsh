@@ -3,12 +3,15 @@
 
 DSH_VERSION ?= $(shell node -e "console.log(require('./package.json').dshVersion)" 2>/dev/null || echo latest)
 PORT ?= 8899
-PLUGINS ?= 0                 # 1 = 集成 plugins/ 下的第三方插件
+PLUGINS ?= all               # all | none | 插件名[,插件名]（默认全部）
 EXTRAS ?= 1                  # 0 = 不装 extras.txt 里的桌面等价插件组
 IMAGE ?= dsh-web
 GHCR ?= ghcr.io/goovoz/dsh
-SUFFIX := $(if $(filter 1,$(PLUGINS)),-plugins,)
-ALIAS := $(if $(filter 1,$(PLUGINS)),latest-plugins,latest)
+# 插件规格归一化：all/1 -> 全部，none/0 -> 空，a,b -> 指定
+PLUGIN_SPEC := $(shell bash scripts/resolve-plugins.sh spec "$(PLUGINS)")
+PLUGIN_SUFFIX := $(shell bash scripts/resolve-plugins.sh suffix "$(PLUGINS)")
+SUFFIX := $(PLUGIN_SUFFIX)
+ALIAS := $(if $(filter -plugins%,$(SUFFIX)),latest-plugins,latest)
 CONTAINER_NAME ?= dsh-web
 ALLOW_LOOPBACK ?= 0
 PUBLIC_HOST ?=
@@ -18,11 +21,15 @@ NAME ?=
 # 传给 compose 的完整环境（compose 只认 environment 里声明过的变量）
 COMPOSE_ENV = PUBLIC_HOST=$(PUBLIC_HOST) DSH_PORT=$(PORT) DSH_ALLOW_LOOPBACK=$(ALLOW_LOOPBACK) DSH_EXTRAS=$(EXTRAS)
 
-.PHONY: help build build-arm64 build-compose up up-build up-pull down logs shell latest bump ghcr plugin-add plugin-update plugin-remove plugin-list require-public-host
+.PHONY: help plugin-spec build build-arm64 build-compose up up-build up-pull down logs shell latest bump ghcr plugin-add plugin-update plugin-remove plugin-list require-public-host
 
 help:
-	@echo "make build                      # 本地构建 amd64 镜像（$(IMAGE):$(DSH_VERSION)$(SUFFIX)，插件: $(if $(filter 1,$(PLUGINS)),集成,不集成)）"
-	@echo "make build PLUGINS=1            # 构建含第三方插件的镜像"
+	@echo "make build                      # 构建镜像 $(IMAGE):$(DSH_VERSION)$(SUFFIX)（插件: $(if $(PLUGIN_SPEC),$(PLUGIN_SPEC),无)）"
+	@echo "make build PLUGINS=all          # 全部插件（默认）"
+	@echo "make build PLUGINS=none         # 不带插件"
+	@echo "make build PLUGINS=qinglong-cli # 只带指定插件（逗号分隔可多选）"
+	@echo "make plugin-spec PLUGINS=...    # 只看插件规格解析结果"
+	@echo "make plugin-list                # 列出插件库与启用状态"
 	@echo "make build-arm64                # 本地构建 arm64 镜像（qemu）"
 	@echo "make build-compose              # 用 compose 叠加文件构建（tag: dsh-web:local）"
 	@echo "make up                         # 用本地镜像启动（PUBLIC_HOST 必填，可写进 .env）"
@@ -36,17 +43,24 @@ help:
 	@echo "make plugin-list                # 列出插件库与启用状态"
 	@echo "make latest / bump              # 查看 / 更新上游 dsh 版本"
 
+plugin-spec:
+	@echo "PLUGINS     = $(PLUGINS)"
+	@echo "PLUGIN_SPEC = $(PLUGIN_SPEC)"
+	@echo "SUFFIX      = $(SUFFIX)"
+	@echo "ALIAS       = $(ALIAS)"
+	@bash scripts/resolve-plugins.sh check "$(PLUGINS)" && echo "插件名校验通过"
+
 build:
 	docker build \
 	  --build-arg DSH_VERSION=$(DSH_VERSION) \
-	  --build-arg WITH_PLUGINS=$(PLUGINS) \
+	  --build-arg WITH_PLUGINS="$(PLUGIN_SPEC)" \
 	  --build-arg WITH_EXTRAS=$(EXTRAS) \
 	  -t $(IMAGE):$(DSH_VERSION)$(SUFFIX) .
 
 build-arm64:
 	docker buildx build --platform linux/arm64 --load \
 	  --build-arg DSH_VERSION=$(DSH_VERSION) \
-	  --build-arg WITH_PLUGINS=$(PLUGINS) \
+	  --build-arg WITH_PLUGINS="$(PLUGIN_SPEC)" \
 	  --build-arg WITH_EXTRAS=$(EXTRAS) \
 	  -t $(IMAGE):$(DSH_VERSION)$(SUFFIX)-arm64 .
 
@@ -60,12 +74,12 @@ require-public-host:
 
 # IMAGE_TAG / CONTAINER_NAME 必须与构建产物一致，否则 compose 会去找不存在的镜像
 up: require-public-host
-	$(COMPOSE_ENV) DSH_VERSION=$(DSH_VERSION) WITH_PLUGINS=$(PLUGINS) WITH_EXTRAS=$(EXTRAS) \
+	$(COMPOSE_ENV) DSH_VERSION=$(DSH_VERSION) WITH_PLUGINS="$(PLUGIN_SPEC)" WITH_EXTRAS=$(EXTRAS) \
 	IMAGE_TAG=$(IMAGE):$(DSH_VERSION)$(SUFFIX) CONTAINER_NAME=$(CONTAINER_NAME) \
 	docker compose up -d
 
 up-build: build require-public-host
-	$(COMPOSE_ENV) DSH_VERSION=$(DSH_VERSION) WITH_PLUGINS=$(PLUGINS) WITH_EXTRAS=$(EXTRAS) \
+	$(COMPOSE_ENV) DSH_VERSION=$(DSH_VERSION) WITH_PLUGINS="$(PLUGIN_SPEC)" WITH_EXTRAS=$(EXTRAS) \
 	IMAGE_TAG=$(IMAGE):$(DSH_VERSION)$(SUFFIX) CONTAINER_NAME=$(CONTAINER_NAME) \
 	docker compose up -d
 
@@ -74,7 +88,7 @@ up-pull: require-public-host
 	$(COMPOSE_ENV) CONTAINER_NAME=$(CONTAINER_NAME) docker compose up -d
 
 build-compose:
-	DSH_VERSION=$(DSH_VERSION) WITH_EXTRAS=$(EXTRAS) WITH_PLUGINS=$(PLUGINS) \
+	DSH_VERSION=$(DSH_VERSION) WITH_EXTRAS=$(EXTRAS) WITH_PLUGINS="$(PLUGIN_SPEC)" \
 	IMAGE_TAG=$(IMAGE):local docker compose -f compose.yaml -f compose.build.yaml build
 
 down:
@@ -100,7 +114,7 @@ ghcr:
 	docker buildx build \
 	  --platform linux/amd64,linux/arm64 \
 	  --build-arg DSH_VERSION=$(DSH_VERSION) \
-	  --build-arg WITH_PLUGINS=$(PLUGINS) \
+	  --build-arg WITH_PLUGINS="$(PLUGIN_SPEC)" \
 	  --build-arg WITH_EXTRAS=$(EXTRAS) \
 	  -t $(GHCR):$(DSH_VERSION)$(SUFFIX) \
 	  -t $(GHCR):$(ALIAS) \

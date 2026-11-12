@@ -1,12 +1,17 @@
 # syntax=docker/dockerfile:1.7
 # DSH Web —— 浏览器访问的 DeepSeekRuntime（容器化部署）
-# 上游版本由 --build-arg DSH_VERSION 决定；第三方插件默认不集成（WITH_PLUGINS=0）。
+# 上游版本由 --build-arg DSH_VERSION 决定。
+#
+# 第三方插件：WITH_PLUGINS 默认 all（全部插件）。
+#   WITH_PLUGINS=all | 1      全部（plugins/enabled.txt）
+#   WITH_PLUGINS=none | 0     不带
+#   WITH_PLUGINS=a,b,c        只带指定插件（逗号分隔；未列出的目录不会进入镜像）
 ARG NODE_IMAGE=node:24-bookworm-slim
 FROM ${NODE_IMAGE}
 
 ARG DSH_VERSION=0.2.2-rc.1
 ARG WITH_EXTRAS=1
-ARG WITH_PLUGINS=0
+ARG WITH_PLUGINS=all
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -38,15 +43,33 @@ COPY capture.mjs gateway.mjs entrypoint.sh /opt/dsh/
 RUN chmod +x /opt/dsh/entrypoint.sh /opt/dsh/scripts/*.sh
 
 # 注意：下面这行用了 RUN --mount，需要 BuildKit（Docker 23+ 默认开启；DOCKER_BUILDKIT=0 会失败）
-# 第三方插件：默认**不集成**。WITH_PLUGINS=1 时才把 plugins/ 拷进镜像并在构建期打补丁。
+# 插件选择：all/1 = 全部；none/0 = 不带；逗号列表 = 只带这些。
+# 列出 enabled.txt 与目录白名单，未选中的插件目录直接从镜像里删掉，构建期就校验插件名是否存在。
 RUN --mount=type=bind,source=plugins,target=/tmp/plugins \
     --mount=type=bind,source=patches,target=/tmp/patches \
-    if [ "$WITH_PLUGINS" = "1" ]; then \
-      cp -a /tmp/plugins/. /opt/plugins/ && \
-      /opt/dsh/scripts/apply-plugin-patches.sh /opt/plugins /tmp/patches; \
+    set -eu; \
+    spec="${WITH_PLUGINS}"; \
+    case "$spec" in \
+      0|none|'') echo "[build] 第三方插件未集成（WITH_PLUGINS=$spec）"; exit 0 ;; \
+    esac; \
+    cp -a /tmp/plugins/. /opt/plugins/; \
+    if [ "$spec" != "all" ] && [ "$spec" != "1" ]; then \
+      list=$(printf '%s' "$spec" | tr ',' ' '); \
+      printf '%s\n' $list > /opt/plugins/enabled.txt; \
+      for name in $list; do \
+        if [ ! -d "/opt/plugins/$name" ]; then \
+          echo "[build] 未知插件: $name（可选：$(ls /opt/plugins | tr '\n' ' ')）" >&2; exit 1; \
+        fi; \
+      done; \
+      for d in /opt/plugins/*/; do \
+        name=$(basename "$d"); \
+        case " $list " in *" $name "*) ;; *) rm -rf "$d" ;; esac; \
+      done; \
+      echo "[build] 只集成插件: $list"; \
     else \
-      echo "[build] 第三方插件未集成（WITH_PLUGINS=0）"; \
-    fi
+      echo "[build] 集成全部插件: $(ls /opt/plugins | tr '\n' ' ')"; \
+    fi; \
+    /opt/dsh/scripts/apply-plugin-patches.sh /opt/plugins /tmp/patches
 
 LABEL org.opencontainers.image.title="dsh-web" \
       org.opencontainers.image.description="DeepSeekRuntime (DSH) in a container, browser UI, upstream-tracking" \
