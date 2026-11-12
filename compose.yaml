@@ -15,6 +15,9 @@ services:
     # 配置错误会 exit 64：用 on-failure 而不是 unless-stopped，避免占位 PUBLIC_HOST 触发无限重启
     restart: on-failure:5
     ports:
+      # DSH_PORT 只写端口号（如 8899）。写成 127.0.0.1:8899 时 Docker 只把端口发布到宿主回环，
+      # 其它机器访问 <宿主IP>:8899 会直接 Connection refused（浏览器表现为转圈或打不开），
+      # 而 `docker ps` 的 Ports 列会显示 127.0.0.1:8899->8899/tcp。
       - "${DSH_PORT:-8899}:8899"
     environment:
       # 【必填】浏览器实际访问的 host[:port]（也接受 https://host/ 这种完整 URL，入口会拆出 scheme）
