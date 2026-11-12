@@ -1,0 +1,73 @@
+name: plugin-check
+
+# 只跑插件自带的自检，不构建镜像；镜像构建由 build.yml 负责。
+on:
+  push:
+    paths:
+      - "plugins/**"
+      - ".github/workflows/plugin-check.yml"
+  pull_request:
+    paths:
+      - "plugins/**"
+  workflow_dispatch:
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: ${{ fromJSON(needs.discover.outputs.plugins) }}
+    needs: discover
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Syntax check (${{ matrix.plugin }})
+        working-directory: plugins/${{ matrix.plugin }}
+        run: node --check index.js
+
+      - name: dsh-install.sh syntax (${{ matrix.plugin }})
+        working-directory: plugins/${{ matrix.plugin }}
+        run: |
+          if [ -f dsh-install.sh ]; then bash -n dsh-install.sh; fi
+
+      - name: Bundled CLI scope check (${{ matrix.plugin }})
+        working-directory: plugins/${{ matrix.plugin }}
+        run: |
+          # vendor 里放的是 CommonJS bundle，必须有 vendor/package.json 声明 type=commonjs，
+          # 否则会被插件根的 type=module 误解析（历史上真的踩过）
+          if [ -d vendor ]; then
+            test -f vendor/package.json || { echo "vendor 缺 package.json"; exit 1; }
+            node -e "const p=require('./vendor/package.json'); if(p.type!=='commonjs'){console.error('vendor/package.json 必须 type=commonjs');process.exit(1)}"
+          fi
+
+      - name: npm test (${{ matrix.plugin }})
+        working-directory: plugins/${{ matrix.plugin }}
+        run: |
+          if node -e "process.exit(require('./package.json').scripts?.test?0:1)"; then
+            npm test
+          else
+            echo "没有 test 脚本，跳过"
+          fi
+
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      plugins: ${{ steps.list.outputs.plugins }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: list
+        run: |
+          set -euo pipefail
+          list=$(for d in plugins/*/; do
+            name=$(basename "$d")
+            [ "$name" = "_template" ] && continue
+            [ -f "$d/index.js" ] || continue
+            printf '"%s",' "$name"
+          done | sed 's/,$//')
+          echo "plugins=[$list]" >> "$GITHUB_OUTPUT"
+          echo "发现插件: [$list]"

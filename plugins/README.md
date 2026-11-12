@@ -67,3 +67,12 @@ diff -u plugins/<plugin>/some.js <改好的文件> > patches/0002-<plugin>-<说�
 
 本仓库只做「DSH 本体 + 插件 + 部署脚手架」。**原生引擎运行时包**（例如需要 Ghidra/JDK/JPype 这类预编译依赖的大体积运行包）
 不属于这里：它们有平台矩阵、体积大、跟插件解耦，请放到独立仓库另行分发，不要塞进本镜像。
+
+## 本仓库已收录的插件
+
+| 目录 | 包名 | 作用 | 自检 |
+|---|---|---|---|
+| `dsh-armor-gen5` | dsh-armor-gen5 | 破甲模式 preset + 提示词内核 | `npm test` |
+| `qinglong-cli` | dsh-qinglong-cli | 官方 `@whyour/qinglong-cli` 的 DSH 工具封装（qlcli 等 4 个工具） | `npm test`（mock 面板，离线） |
+
+`plugin-check` workflow 会对 `plugins/*/index.js` 做语法检查、校验 vendor 作用域声明，并跑带 `test` 脚本的插件自检。
