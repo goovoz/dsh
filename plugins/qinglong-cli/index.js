@@ -8,6 +8,7 @@
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import net from 'node:net';
+import tls from 'node:tls';
 import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
@@ -49,17 +50,20 @@ const NODE_BIN = process.execPath;
 // ---------- 回环转发 ----------
 let relay = null;
 
-function startRelay(host, port) {
+function startRelay({ host, port, useTls = false }) {
   return new Promise((resolve, reject) => {
     const server = net.createServer((client) => {
-      const upstream = net.connect({ host, port }, () => {
-        client.pipe(upstream);
-        upstream.pipe(client);
-      });
+      const upstream = useTls
+        ? tls.connect({ host, port, servername: host })
+        : net.connect({ host, port });
       const kill = () => {
         client.destroy();
         upstream.destroy();
       };
+      upstream.on(useTls ? 'secureConnect' : 'connect', () => {
+        client.pipe(upstream);
+        upstream.pipe(client);
+      });
       client.on('error', kill);
       upstream.on('error', kill);
       client.on('close', kill);
@@ -77,13 +81,17 @@ async function ensureRelay() {
   }
   const u = new URL(QL_URL);
   const loopback = ['127.0.0.1', 'localhost', '::1'].includes(u.hostname);
-  if (loopback && u.protocol === 'http:') {
+  // 回环地址 CLI 本来就接受，直接透传（保留协议与路径前缀）
+  if (loopback) {
     relay = { base: QL_URL.replace(/\/+$/, '') };
     return relay;
   }
-  const port = Number(u.port || (u.protocol === 'https:' ? 443 : 80));
-  const r = await startRelay(u.hostname, port);
-  relay = { base: `http://127.0.0.1:${r.port}`, server: r.server };
+  const useTls = u.protocol === 'https:';
+  const port = Number(u.port || (useTls ? 443 : 80));
+  // 面板可能挂在反向代理的子路径下（QL_URL=https://host/ql），前缀必须保留
+  const prefix = u.pathname.replace(/\/+$/, '');
+  const r = await startRelay({ host: u.hostname, port, useTls });
+  relay = { base: `http://127.0.0.1:${r.port}${prefix}`, server: r.server };
   return relay;
 }
 

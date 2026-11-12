@@ -18,7 +18,7 @@
   ],
   "scripts": {
     "harness:check": "node --check index.js",
-    "test": "node tools/selftest.mjs"
+    "test": "node tools/selftest.mjs && node tools/selftest-prefix.mjs"
   },
   "keywords": [
     "dsh",
