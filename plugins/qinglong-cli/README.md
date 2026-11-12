@@ -8,7 +8,8 @@
 
 | 约束 | 官方行为 | 插件做法 |
 |---|---|---|
-| 传输 | 只接受 HTTPS 或**回环** HTTP，`http://192.168.x.x:5700` 直接报「远程认证需要 HTTPS；HTTP 仅允许回环地址」 | 在 `127.0.0.1:随机端口` 起 `net` 双向转发到面板真实地址，注入 `QL_URL=http://127.0.0.1:<port>` |
+| 传输 | 只接受 HTTPS 或**回环** HTTP，`http://192.168.x.x:5700` 直接报「远程认证需要 HTTPS；HTTP 仅允许回环地址」 | 在 `127.0.0.1:随机端口` 起双向转发（https 上游用 TLS 握手），注入 `QL_URL=http://127.0.0.1:<port><前缀>` |
+| 反代子路径 | `QL_URL` 允许带路径前缀（如 `https://host/ql`），CLI 会把它拼在 `/open/*` 前面 | 转发时保留 `URL.pathname`，中转地址是 `http://127.0.0.1:<port>/ql` |
 | 参数代际 | 新命令吃 `--query/--data/--timeout`，旧命令只吃 `--page/--size` 这类位置式选项 | 先跑 `ql <cmd> --help` 缓存选项集，再决定 `query` 转成 `--query <json>` 还是展开成 `--key value` |
 | 凭据 | `ql login` 是交互式，且会把凭据写盘 | 插件自己用 Client ID/Secret 换 `/open/auth/token`，内存缓存、按 expiration 刷新，不落盘 |
 
@@ -27,7 +28,7 @@
 
 | 变量 | 说明 |
 |---|---|
-| `QL_URL` | 面板地址，例如 `http://172.20.0.9:5700`（`/open` 由插件自己拼，不要带） |
+| `QL_URL` | 面板根地址，例如 `http://172.20.0.9:5700`；挂反代子路径时写 `https://example.com/ql`（不要带 `/open`，插件会自己拼） |
 | `QL_CLIENT_ID` / `QL_CLIENT_SECRET` | 面板「系统设置 → 应用设置」创建的应用凭据 |
 | `QL_CLI_PATH` | 可选，覆盖内置 `vendor/ql.js` |
 
@@ -95,10 +96,13 @@ qlcli { args:["api","request","GET","/open/crons/26"] }
 ## 自检
 
 ```bash
-node tools/selftest.mjs
+npm test
 ```
 
-起一个 mock 青龙（只实现 `/open/auth/token`、`/open/crons`、`/open/scripts`），用真实 `vendor/ql.js` 跑完整链路，不需要真实面板。
+两个用例，都不需要真实面板：
+
+- `tools/selftest.mjs`：mock 面板绑在 `127.0.0.1`（回环直通路径），覆盖 token、任务列表、脚本列表、帮助、路由表。
+- `tools/selftest-prefix.mjs`：mock 面板绑在 `127.0.0.2` 并挂在 `/ql` 子路径 —— `127.0.0.2` 不在回环白名单，强制走转发分支，断言中转地址保留前缀、上游收到 `/ql/open/*`、且没有裸 `/open` 请求。
 
 ## 目录
 
