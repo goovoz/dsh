@@ -77,6 +77,7 @@ window.__ModuleLoader__.load({
         cursor: "pointer",
       },
       ok: { color: "#2f9e44", fontSize: "12px" },
+      warn: { color: "#e3a008", fontSize: "12px" },
       err: { color: "#e03131", fontSize: "12px" },
       dim: { opacity: 0.55, fontSize: "11px" },
       badge: {
@@ -121,6 +122,7 @@ window.__ModuleLoader__.load({
           placeholder: props.placeholder || "",
           spellCheck: false,
           autoComplete: "off",
+          onKeyDown: props.onKeyDown,
           onChange: function (e) {
             props.onChange(e.target.value);
           },
@@ -230,9 +232,20 @@ window.__ModuleLoader__.load({
       }
 
       var locked = (info && info.locked) || {};
-      var ready = Boolean(f.qlUrl && f.clientId && f.clientSecret);
+      var filled = Boolean(f.qlUrl && f.clientId && f.clientSecret);
+      // 三态：没填 / 填了没保存 / 已保存可用。原来只用服务端 ready，会让人误以为输入框里的值无效
+      var statusText = !filled ? "未填写" : info && info.ready ? "已配置" : "未保存";
+      var statusStyle = !filled ? S.dim : info && info.ready ? S.ok : S.warn;
+      var loadFailed = info && info.ok === false;
       var lockHint = function (key) {
         return locked[key] ? "已被环境变量固定，面板改动不会覆盖它" : "";
+      };
+
+      var onEnter = function (e) {
+        if (e.key === "Enter" && !busy) {
+          e.preventDefault();
+          save();
+        }
       };
 
       return react.createElement(
@@ -250,6 +263,19 @@ window.__ModuleLoader__.load({
           "填面板地址与应用凭据，保存后立即生效。凭据只写入本机配置文件，供 DSH 工具 qlcli 使用。"
         ),
 
+        loadFailed
+          ? react.createElement(
+              "div",
+              { style: { ...S.card, borderColor: "rgba(224,49,49,.5)" } },
+              react.createElement("div", { style: S.err }, "读取配置失败：" + ((info && (info.error || info.message)) || "接口无响应")),
+              react.createElement(
+                "div",
+                { style: S.hint },
+                "常见原因：服务端插件未加载（/qinglong/config 404）。重启 DSH 后重试。"
+              )
+            )
+          : null,
+
         react.createElement(
           "div",
           { style: S.card },
@@ -260,6 +286,7 @@ window.__ModuleLoader__.load({
             hint:
               "不要带 /open。挂反向代理子路径时写完整根地址，例如 https://example.com/ql" +
               (lockHint("qlUrl") ? " · " + lockHint("qlUrl") : ""),
+            onKeyDown: onEnter,
             onChange: function (v) {
               setF({ qlUrl: v, clientId: f.clientId, clientSecret: f.clientSecret });
             },
@@ -269,6 +296,7 @@ window.__ModuleLoader__.load({
             value: f.clientId,
             placeholder: "面板 → 系统设置 → 应用设置 里创建",
             hint: lockHint("clientId"),
+            onKeyDown: onEnter,
             onChange: function (v) {
               setF({ qlUrl: f.qlUrl, clientId: v, clientSecret: f.clientSecret });
             },
@@ -278,6 +306,7 @@ window.__ModuleLoader__.load({
             value: f.clientSecret,
             placeholder: "与 Client ID 成对的应用密钥",
             hint: lockHint("clientSecret"),
+            onKeyDown: onEnter,
             onChange: function (v) {
               setF({ qlUrl: f.qlUrl, clientId: f.clientId, clientSecret: v });
             },
@@ -287,30 +316,23 @@ window.__ModuleLoader__.load({
             { style: S.row },
             react.createElement(
               "button",
-              { style: S.btnPrimary, disabled: busy !== "" || !ready, onClick: save },
+              { style: S.btnPrimary, disabled: busyKind !== "" || !filled, onClick: save, type: "button" },
               busyKind === "save" ? "保存中…" : "保存并生效"
             ),
             react.createElement(
               "button",
-              { style: S.btn, disabled: busy !== "" || !ready, onClick: test },
+              { style: S.btn, disabled: busyKind !== "" || !filled, onClick: test, type: "button" },
               busyKind === "test" ? "测试中…" : "测试连接"
             ),
-            react.createElement(
-              "button",
-              { style: S.btn, disabled: busy !== "", onClick: load },
-              "重新读取"
-            ),
-            info
-              ? react.createElement(
-                  "span",
-                  { style: info.ready ? S.ok : S.dim },
-                  info.ready ? "已配置" : "未配置完整"
-                )
-              : null
+            react.createElement("button", { style: S.btn, disabled: busyKind !== "", onClick: load, type: "button" }, "重新读取"),
+            react.createElement("span", { style: statusStyle }, statusText)
           ),
-          msg
-            ? react.createElement("div", { style: msg.kind === "ok" ? S.ok : S.err }, msg.text)
-            : null
+          react.createElement(
+            "div",
+            { style: S.hint },
+            "输入框里按 Enter 也能保存。若按钮点不动，多半是页面上还有 DSH 的弹层（Preview Notice 等）盖着，先点它的 Continue 或刷新页面。"
+          ),
+          msg ? react.createElement("div", { style: msg.kind === "ok" ? S.ok : S.err }, msg.text) : null
         ),
 
         info && info.settingsFile
