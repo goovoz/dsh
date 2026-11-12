@@ -63,7 +63,7 @@ jobs:
           OWNER=${{ github.repository_owner }}
           VER=${{ steps.v.outputs.pinned }}
           SUF=${{ steps.v.outputs.suffix }}
-          if [ "${{ steps.v.outputs.plugins }}" = "1" ]; then ALIAS=latest-plugins; else ALIAS=latest; fi
+          if [ -n "$suffix" ]; then ALIAS=latest-plugins; else ALIAS=latest; fi
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --build-arg DSH_VERSION="$VER" \
@@ -76,7 +76,7 @@ jobs:
         run: |
           IMG="ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
           docker run --rm --platform linux/amd64 --entrypoint dsh "$IMG" --version
-          if [ "${{ steps.v.outputs.plugins }}" = "0" ]; then
+          if [ "${{ steps.v.outputs.plugins }}" = "none" ]; then
             docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -lc 'test -z "$(ls -A /opt/plugins)" && echo "amd64: no plugins bundled: ok"'
           else
             docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -lc 'test -d /opt/plugins/dsh-armor-gen5 && echo "amd64: plugins bundled: ok"'
@@ -150,5 +150,5 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             echo "release $TAG 已存在"
           else
-            gh release create "$TAG" --title "$TAG" --notes "DSH ${{ steps.v.outputs.pinned }} · plugins: ${{ steps.v.outputs.plugins == '1' && 'integrated' || 'none' }} · platforms: linux/amd64, linux/arm64 — docker pull --platform linux/arm64 $IMG"
+            gh release create "$TAG" --title "$TAG" --notes "DSH ${{ steps.v.outputs.pinned }} · plugins: ${{ steps.v.outputs.plugins != 'none' && 'integrated' || 'none' }} · platforms: linux/amd64, linux/arm64 — docker pull --platform linux/arm64 $IMG"
           fi
