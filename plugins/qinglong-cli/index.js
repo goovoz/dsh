@@ -23,9 +23,10 @@ export const name = 'dsh-qinglong-cli';
 export const inject = ['tools'];
 
 const VERSION = '0.1.0';
-const SETTINGS_FILE =
-  process.env.QINGLONG_CLI_CONFIG ||
-  (process.env.DSH_HOME ? join(process.env.DSH_HOME, 'ql-cli.json') : join(homedir(), '.dsh', 'qinglong-cli.json'));
+const DSH_DIR = process.env.DSH_HOME || join(homedir(), '.dsh');
+const SETTINGS_FILE = process.env.QINGLONG_CLI_CONFIG || join(DSH_DIR, 'qinglong-cli.json');
+// 兼容早期版本写过 ql-cli.json 的路径
+const LEGACY_FILES = [join(DSH_DIR, 'ql-cli.json')];
 
 // ---------- 配置（可变 + 持久化） ----------
 function readJson(file) {
@@ -36,7 +37,15 @@ function readJson(file) {
   }
 }
 
-let fileCfg = readJson(SETTINGS_FILE) || {};
+function readFirstAvailable() {
+  for (const f of [SETTINGS_FILE, ...LEGACY_FILES]) {
+    const j = readJson(f);
+    if (j) return j;
+  }
+  return {};
+}
+
+let fileCfg = readFirstAvailable();
 
 function envLocked(key) {
   const map = { qlUrl: 'QL_URL', clientId: 'QL_CLIENT_ID', clientSecret: 'QL_CLIENT_SECRET', cliPath: 'QL_CLI_PATH' };
