@@ -23,6 +23,11 @@ on:
         type: boolean
         default: true
 
+# 同一 ref 上串行构建：避免 push 与 dispatch 并发时互相覆盖同一个 tag
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
   packages: write
