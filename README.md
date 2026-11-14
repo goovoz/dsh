@@ -180,6 +180,30 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 2. `--trusted-host` 与浏览器 authority 必须对得上——现在由网关统一改写上游 Host 为 `dsh.internal` 解决，不再依赖手工配置；
 3. launch token 是**进程级**凭证，只能在服务端换 cookie，不能暴露给浏览器。
 
+## 图片输入（vision）
+
+模型在 `llm-pi-ai` 里没声明 `input` 时，DSH 认为它只收文本：附件里发图会弹“大模型不支持图片”。
+本仓库在容器启动时（以及每次重启 dsh 前）幂等补齐：
+
+```yaml
+# $DSH_HOME/profiles/web/cordis.patch.yml
+- id: llm-pi-ai
+  config:
+    providers:
+      workbuddy:
+        models:
+          - id: cn:deepseek-v4.1-flash
+            # …
+            input: [ text, image ]    # ← 有这一行才能发图
+```
+
+| 开关 | 默认 | 说明 |
+|---|---|---|
+| `DSH_ENABLE_VISION` | `1` | 启动时扫描 profile patch，给缺 `input` 的模型补上 `[ text, image ]`；已是 `[ text ]` 的会升级 |
+| `DSH_VISION_EXCLUDE` | 空 | 逗号分隔的模型 id，排除在外（例如确实不支持图片的文本模型） |
+
+手动重跑（例如刚在 UI 里加了新模型）：`docker exec dsh-web /opt/dsh/scripts/enable-vision.sh`。
+
 ## 排错
 
 | 现象 | 处理 |

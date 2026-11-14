@@ -68,6 +68,16 @@ case "$(printf '%s' "${DSH_PLUGINS:-0}" | tr 'A-Z' 'a-z')" in
     /opt/dsh/scripts/install-plugins.sh || echo "[entrypoint] 插件安装失败（继续启动）" ;;
 esac
 
+# 首次启动先初始化 profile（dsh plugin list 会按模板落地 profiles/<name>/，含 cordis.patch.yml）
+if [ ! -f "${PROFILE_DIR}/package.json" ]; then
+  echo "[entrypoint] 初始化 profile ${PROFILE}"
+  dsh plugin --profile "${PROFILE}" list >/dev/null 2>&1 || true
+fi
+
+# 模型图片输入能力（幂等）：给 llm-pi-ai 的模型补 input: [ text, image ]
+# 起因：模型没声明 input 时 DSH 认为它只收文本，发图会被拒（“大模型不支持图片”）
+/opt/dsh/scripts/enable-vision.sh || echo "[entrypoint] vision 补丁失败（继续启动）"
+
 node /opt/dsh/gateway.mjs &
 GATEWAY_PID=$!
 trap 'kill -TERM "${GATEWAY_PID}" 2>/dev/null' EXIT
@@ -76,6 +86,8 @@ trap 'kill -TERM "${GATEWAY_PID}" 2>/dev/null' EXIT
 BACKOFF=3
 while true; do
   STARTED_AT=$(date +%s)
+  # profile 可能是本次启动才创建的，每轮再补一次（幂等、开销很小）
+  /opt/dsh/scripts/enable-vision.sh >/dev/null 2>&1 || true
   echo "[entrypoint] starting: dsh --profile ${PROFILE} --host 127.0.0.1 --port ${DSH_WEB_PORT} --public-url ${PUBLIC_URL} --trusted-host ${INTERNAL_AUTHORITY}"
   dsh --profile "${PROFILE}" \
       --host 127.0.0.1 \

@@ -38,6 +38,10 @@ services:
       # （PUBLIC_HOST 仍然必填，不能只设这个开关。）
       # 必须在此声明，否则宿主 env（shell / .env）不会传进容器。
       DSH_ALLOW_LOOPBACK: ${DSH_ALLOW_LOOPBACK:-0}
+      # 【可选，默认 1】给 llm-pi-ai 的模型补 input: [ text, image ]（图片输入能力）。
+      # 置 0 关闭；只对个别模型关闭用 DSH_VISION_EXCLUDE="cn:xxx,cn:yyy"。
+      DSH_ENABLE_VISION: ${DSH_ENABLE_VISION:-1}
+      DSH_VISION_EXCLUDE: ${DSH_VISION_EXCLUDE:-}
       TZ: ${TZ:-Asia/Shanghai}
     # compose >= 2.24 才支持 path/required 写法；老版本请删掉这段，改用 --env-file
     env_file:
