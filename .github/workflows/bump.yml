@@ -59,4 +59,4 @@ jobs:
         if: steps.decide.outputs.bump == '1' && inputs.dry_run != true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run build.yml --ref master -f plugins=none -f release=true
+        run: gh workflow run build.yml --ref master -f dsh_infinite_gen_n=false -f qinglong_cli=false -f dsh_armor_gen5=false -f release=true

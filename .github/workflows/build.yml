@@ -14,16 +14,19 @@ on:
     - cron: "0 3 * * 1"
   workflow_dispatch:
     inputs:
-      plugins:
-        description: "集成哪些第三方插件（all=按 plugins/enabled.txt；dsh-armor-gen5 已退役，仅显式选择才构建）"
-        type: choice
-        options:
-          - all
-          - dsh-infinite-gen-n
-          - dsh-qinglong-cli
-          - dsh-armor-gen5
-          - none
-        default: all
+      # 每个插件一个勾选框：全勾 = 全部插件，全不勾 = 不带插件（不再需要 all/none 选项）
+      dsh_infinite_gen_n:
+        description: "dsh-infinite-gen-n  ·  破甲插件（无限N代）"
+        type: boolean
+        default: true
+      qinglong_cli:
+        description: "qinglong-cli  ·  青龙面板客户端"
+        type: boolean
+        default: true
+      dsh_armor_gen5:
+        description: "dsh-armor-gen5  ·  已退役（与 gen-n 预设冲突，仅回退时勾选）"
+        type: boolean
+        default: false
       release:
         description: "创建 GitHub Release"
         type: boolean
@@ -60,8 +63,16 @@ jobs:
           set -u
           pinned=$(node -p "require('./package.json').dshVersion")
           upstream=$(npm view @deepseek-ai/dsh version)
-          plugins='${{ inputs.plugins || 'all' }}'
-          case "$plugins" in ''|0|false) plugins=none ;; 1|true) plugins=all ;; esac
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            sel=""
+            case "${{ inputs.dsh_infinite_gen_n }}" in true) sel="$sel,dsh-infinite-gen-n" ;; esac
+            case "${{ inputs.qinglong_cli }}" in true) sel="$sel,qinglong-cli" ;; esac
+            case "${{ inputs.dsh_armor_gen5 }}" in true) sel="$sel,dsh-armor-gen5" ;; esac
+            plugins=${sel#,}
+            [ -n "$plugins" ] || plugins=none
+          else
+            plugins=all
+          fi
           suffix=$(bash scripts/resolve-plugins.sh suffix "$plugins")
           { echo "pinned=$pinned"; echo "upstream=$upstream"; echo "plugins=$plugins"; echo "suffix=$suffix"; } >> "$GITHUB_OUTPUT"
           echo "pinned=$pinned upstream=$upstream plugins=$plugins"
@@ -74,12 +85,11 @@ jobs:
           OWNER=${{ github.repository_owner }}
           VER=${{ steps.v.outputs.pinned }}
           SUF=${{ steps.v.outputs.suffix }}
-          PLUGINS=${{ steps.v.outputs.plugins }}
           TAG_ARGS="-t ghcr.io/$OWNER/dsh:$VER$SUF"
-          case "$PLUGINS" in
-            all|1) TAG_ARGS="$TAG_ARGS -t ghcr.io/$OWNER/dsh:latest-plugins -t ghcr.io/$OWNER/dsh:latest" ;;
-            none|0|'') TAG_ARGS="$TAG_ARGS -t ghcr.io/$OWNER/dsh:latest" ;;
-            *) TAG_ARGS="$TAG_ARGS -t ghcr.io/$OWNER/dsh:latest-plugins" ;;
+          case "$SUF" in
+            -plugins) TAG_ARGS="$TAG_ARGS -t ghcr.io/$OWNER/dsh:latest-plugins -t ghcr.io/$OWNER/dsh:latest" ;;
+            '')       TAG_ARGS="$TAG_ARGS -t ghcr.io/$OWNER/dsh:latest" ;;
+            *)        echo "[tag] 非完整集（$SUF），只打版本 tag，不动 latest*" ;;
           esac
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
@@ -92,14 +102,18 @@ jobs:
         run: |
           IMG="ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
           docker run --rm --platform linux/amd64 --entrypoint dsh "$IMG" --version
-          if [ "${{ steps.v.outputs.plugins }}" = "none" ]; then
+          SPEC="${{ steps.v.outputs.plugins }}"
+          echo "plugins=$SPEC"
+          if [ "$SPEC" = "none" ]; then
             docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -lc 'test -z "$(ls -A /opt/plugins)" && echo "amd64: no plugins bundled: ok"'
           else
-            echo "plugins=${{ steps.v.outputs.plugins }}"
-            docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -lc 'ls /opt/plugins; test -d /opt/plugins/dsh-infinite-gen-n && echo "amd64: dsh-infinite-gen-n bundled: ok"'
-            if [ "${{ steps.v.outputs.plugins }}" = "all" ]; then
-              docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -lc 'test ! -d /opt/plugins/dsh-armor-gen5 && echo "amd64: retired dsh-armor-gen5 not bundled: ok"'
-            fi
+            for name in $(printf '%s' "$SPEC" | tr ',' ' '); do
+              docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -lc "test -d /opt/plugins/$name && echo \"amd64: $name bundled: ok\""
+            done
+            case "$SPEC" in
+              *dsh-armor-gen5*) ;;
+              *) docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -lc 'test ! -d /opt/plugins/dsh-armor-gen5 && echo "amd64: retired dsh-armor-gen5 not bundled: ok"' ;;
+            esac
           fi
 
       - name: Smoke test arm64 (QEMU)

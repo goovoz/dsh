@@ -76,15 +76,18 @@ vendored 目录需要重新拷贝或转成 submodule。
 镜像默认不含它（两者预设 id 都叫 `armor`，同时启用会 `Duplicate agent preset`）。
 要回退：`make build PLUGINS=dsh-armor-gen5`。
 
-### 构建参数 / CI 下拉
+### 构建参数 / CI 勾选
 
-| 取值 | 行为 |
+手动触发 `build` workflow 时，每个插件是一个**独立勾选框**（GitHub Actions 没有多选下拉，用多个 boolean 输入实现）：
+
+| 勾选框 | 默认 |
 |---|---|
-| `all`（默认） | 按 `enabled.txt` 构建 |
-| `none` | 不带插件 |
-| `dsh-infinite-gen-n` / `dsh-qinglong-cli` / `dsh-armor-gen5` | 只带选中的那个 |
+| `dsh-infinite-gen-n` · 破甲插件（无限N代） | ✅ 勾选 |
+| `qinglong-cli` · 青龙面板客户端 | ✅ 勾选 |
+| `dsh-armor-gen5` · 已退役 | ⬜ 不勾（与 gen-n 预设冲突，仅回退时勾） |
 
-手动触发 `build` workflow 时，`plugins` 是下拉框，默认 `all`；也可以命令行 `make build PLUGINS=...`。
+全勾 = 全部插件，全不勾 = 不带插件；任意组合都可以（例如只勾 `qinglong-cli`）。
+命令行等价：`make build PLUGINS=all` / `PLUGINS=none` / `PLUGINS=qinglong-cli` / `PLUGINS=a,b`。
 
 ### 上游同步
 

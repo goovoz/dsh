@@ -10,13 +10,15 @@ dsh-infinite-gen-n     # 破甲插件（无限N代），替代已退役的 dsh-a
 qinglong-cli           # 青龙面板客户端
 ```
 
-`WITH_PLUGINS` 语义（构建参数，也是 CI 手动触发的下拉项）：
+`WITH_PLUGINS` 语义（构建参数）；CI 手动触发时换成每个插件一个勾选框，全勾=`enabled.txt`，全不勾=不带插件：
 
 | 取值 | 行为 |
 |---|---|
 | `all`（默认） | 只构建/安装 `enabled.txt` 里的插件 |
 | `none` | 不带任何插件 |
 | `a,b` | 只构建/安装点名的插件（未列出的目录不会进入镜像） |
+
+> 新增插件时记得在 `build.yml` 里加一个同名 boolean 勾选框（插件多起来后可以写成循环，但 GitHub 只接受静态 inputs）。
 
 ## 已退役：`dsh-armor-gen5`
 
