@@ -70,7 +70,7 @@ RUN --mount=type=bind,source=plugins,target=/tmp/plugins \
     esac; \
     cp -a /tmp/plugins/. /opt/plugins/; \
     if [ "$spec" = "all" ] || [ "$spec" = "1" ]; then \
-      list=$(grep -vE '^[[:space:]]*(#|$)' /opt/plugins/enabled.txt | tr '\n' ' '); \
+      list=$(sed 's/\r$//' /opt/plugins/enabled.txt | grep -vE '^[[:space:]]*(#|$)' | tr '\n' ' '); \
       echo "[build] 按 enabled.txt 集成: $list"; \
     else \
       list=$(printf '%s' "$spec" | tr ',' ' '); \

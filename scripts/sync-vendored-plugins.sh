@@ -49,6 +49,6 @@ while IFS=$'\t' read -r name url ref mode note; do
   rm -rf "$dest" && mkdir -p "$dest" && tar -C "$tmp/${name}" -cf - . | tar -C "$dest" -xf -
   echo "[sync] ${name}: 已更新 → $(version_of "$dest")"
   changed=$((changed+1))
-done < "$LIST"
+done < <(sed 's/\r$//' "$LIST")
 echo "[sync] 有更新 ${changed} 个；上游不可用 ${unavailable} 个（均保留本地快照）"
 exit 0

@@ -22,7 +22,7 @@ for p in "$PATCHES"/*.patch; do
   elif patch -p1 -d "$PLUGINS" -R --dry-run < "$p" >/dev/null 2>&1; then
     echo "[patch] already applied $name"
   else
-    echo "[patch] CONFLICT $name（插件版本变了？按 plugins/README 重新生成）" >&2
+    echo "[patch] CONFLICT $name：插件源码变了，补丁不再匹配。请更新 patches/$name 后重试（同步上游会覆盖插件源码，补丁要跟着改）" >&2
     exit 1
   fi
 done

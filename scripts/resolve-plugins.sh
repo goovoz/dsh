@@ -14,7 +14,7 @@ ROOT=${ROOT:-$(cd "$(dirname "$0")/.." && pwd)}
 ENABLED="$ROOT/plugins/enabled.txt"
 
 all_list() {
-  grep -vE '^[[:space:]]*#' "$ENABLED" 2>/dev/null \
+  sed 's/\r$//' "$ENABLED" 2>/dev/null | grep -vE '^[[:space:]]*#' \
     | sed 's/[[:space:]]*$//' \
     | sed '/^[[:space:]]*$/d' \
     | tr '\n' ',' | sed 's/,$//'
@@ -22,7 +22,7 @@ all_list() {
 
 normalize() {
   local raw="$1"
-  raw=$(printf '%s' "$raw" | tr ' ' ',' | sed 's/,,*/,/g; s/^,//; s/,$//')
+  raw=$(printf '%s' "$raw" | tr -d '\r' | tr ' ' ',' | sed 's/,,*/,/g; s/^,//; s/,$//')
   printf '%s' "$raw"
 }
 
@@ -30,6 +30,8 @@ mode=${1:-spec}
 raw=${2:-all}
 ALL=$(all_list)
 
+# 先去 CR 与首尾空白，再判断 all/none（避免 "all "、"all\r" 被当成插件名）
+raw=$(printf '%s' "$raw" | tr -d '\r' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')
 case "$(printf '%s' "$raw" | tr 'A-Z' 'a-z')" in
   ''|0|none|no)      SPEC="" ;;
   1|all|yes)         SPEC="$ALL" ;;

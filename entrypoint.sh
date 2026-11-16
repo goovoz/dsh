@@ -74,11 +74,10 @@ if [ ! -f "${PROFILE_DIR}/package.json" ]; then
   dsh plugin --profile "${PROFILE}" list >/dev/null 2>&1 || true
 fi
 
-# 模型图片输入能力（幂等）：给 llm-pi-ai 的模型补 input: [ text, image ]
-# 起因：模型没声明 input 时 DSH 认为它只收文本，发图会被拒（“大模型不支持图片”）
 # 清理已退役插件残留的 profile 行（dsh-armor-gen5 的 preset-armor 会与 gen-n 抢同名预设）
 /opt/dsh/scripts/prune-retired-rows.sh || echo "[entrypoint] 清理退役 profile 行失败（继续启动）"
 
+# 模型图片输入能力（幂等）：模型没声明 input 时 DSH 认为它只收文本，发图会被拒
 /opt/dsh/scripts/enable-vision.sh || echo "[entrypoint] vision 补丁失败（继续启动）"
 
 node /opt/dsh/gateway.mjs &
@@ -97,7 +96,7 @@ while true; do
       --port "${DSH_WEB_PORT:-3080}" \
       --no-open \
       --public-url "${PUBLIC_URL}" \
-      --trusted-host "${INTERNAL_AUTHORITY}" "${INTERNAL_AUTHORITY%%:*}" 127.0.0.1 "127.0.0.1:${DSH_WEB_PORT:-3080}" \
+      --trusted-host "${INTERNAL_AUTHORITY}" "${INTERNAL_AUTHORITY%%:*}" "${PUBLIC_HOST}" "${PUBLIC_HOST%%:*}" 127.0.0.1 "127.0.0.1:${DSH_WEB_PORT:-3080}" \
       2>&1 | node /opt/dsh/capture.mjs
   code=$?
   RAN_FOR=$(( $(date +%s) - STARTED_AT ))

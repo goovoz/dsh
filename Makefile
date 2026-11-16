@@ -1,17 +1,24 @@
 # DSH Web 容器化部署
 -include .env            # 支持在 .env 里写 PUBLIC_HOST / DSH_PORT 等
 
+# 注意：Make 的变量值会把行尾注释前的空格算进去（`PLUGINS ?= all   # x` 的值是 "all   "），
+# 会让 resolve-plugins.sh 把 "all " 当成插件名 → tag 变成 -plugins-all。注释一律单独写一行。
 DSH_VERSION ?= $(shell node -e "console.log(require('./package.json').dshVersion)" 2>/dev/null || echo latest)
+# 宿主端口（只写端口号；写 127.0.0.1:8899 会把端口只发布到回环）
 PORT ?= 8899
-PLUGINS ?= all               # all | none | 插件名[,插件名]（默认全部）
-EXTRAS ?= 1                  # 0 = 不装 extras.txt 里的桌面等价插件组
+# all | none | 插件名[,插件名]（默认全部）
+PLUGINS ?= all
+# 0 = 不装 extras.txt 里的桌面等价插件组
+EXTRAS ?= 1
 IMAGE ?= dsh-web
 GHCR ?= ghcr.io/goovoz/dsh
 # 插件规格归一化：all/1 -> 全部，none/0 -> 空，a,b -> 指定
 PLUGIN_SPEC := $(shell bash scripts/resolve-plugins.sh spec "$(PLUGINS)")
 PLUGIN_SUFFIX := $(shell bash scripts/resolve-plugins.sh suffix "$(PLUGINS)")
 SUFFIX := $(PLUGIN_SUFFIX)
-ALIAS := $(if $(filter -plugins%,$(SUFFIX)),latest-plugins,latest)
+# 只有精确的完整集（-plugins）才移动 latest-plugins；纯净版移动 latest；子集不动任何别名
+ALIAS := $(if $(filter -plugins,$(SUFFIX)),latest-plugins,$(if $(SUFFIX),,latest))
+ALIAS_ARG := $(if $(ALIAS),-t $(GHCR):$(ALIAS),)
 CONTAINER_NAME ?= dsh-web
 ALLOW_LOOPBACK ?= 0
 PUBLIC_HOST ?=
@@ -120,7 +127,7 @@ ghcr:
 	  --build-arg WITH_EXTRAS=$(EXTRAS) \
 	  --build-arg GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo local) \
 	  -t $(GHCR):$(DSH_VERSION)$(SUFFIX) \
-	  -t $(GHCR):$(ALIAS) \
+	  $(ALIAS_ARG) \
 	  --push .
 
 plugin-add:

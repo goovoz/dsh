@@ -9,7 +9,9 @@ MARKER="${PROFILE_DIR}/.dsh-web-extras"
 
 [ -f "${LIST}" ] || { echo "[extras] 没有 extras.txt"; exit 0; }
 
-desired="$(grep -vE '^[[:space:]]*#' "${LIST}" | sed '/^[[:space:]]*$/d' | tr '\n' ',')"
+# 统一去掉 CRLF 与注释，得到一份干净的包名清单
+pkgs="$(sed 's/\r$//' "${LIST}" | grep -vE '^[[:space:]]*#' | sed '/^[[:space:]]*$/d')"
+desired="$(printf '%s\n' "${pkgs}" | tr '\n' ',')"
 dsh_v="$(dsh --version 2>/dev/null | tail -1)"
 want="dsh=${dsh_v}|${desired}"
 current="$(cat "${MARKER}" 2>/dev/null || true)"
@@ -34,7 +36,7 @@ while IFS= read -r pkg; do
     printf '%s\n' "${out}" | tail -12 >&2
     failed=1
   fi
-done < <(grep -vE '^[[:space:]]*#' "${LIST}" | sed '/^[[:space:]]*$/d')
+done <<< "${pkgs}"
 
 if [ "${failed}" = 0 ] && [ -n "${desired}" ]; then
   printf '%s' "${want}" > "${MARKER}"

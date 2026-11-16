@@ -10,10 +10,11 @@ LIST="${ROOT}/enabled.txt"
 [ -f "${LIST}" ] || { echo "[plugins] 没有 enabled.txt，跳过"; exit 0; }
 mkdir -p "${PROFILE_DIR}"
 dsh_v="$(dsh --version 2>/dev/null | tail -1)"
+names="$(sed 's/\r$//' "${LIST}" | grep -vE '^[[:space:]]*#' | sed '/^[[:space:]]*$/d')"
 
 failed=0
 while IFS= read -r name; do
-  case "${name}" in ''|'#'*) continue ;; esac
+  [ -z "${name}" ] && continue
   dir="${ROOT}/${name}"
   if [ ! -d "${dir}" ]; then echo "[plugins] 缺目录 ${dir}" >&2; failed=1; continue; fi
   # 插件若本身是 git 仓库（submodule），用提交号做指纹；否则退回 package.json 的 mtime+size
@@ -46,6 +47,6 @@ while IFS= read -r name; do
     failed=1
     echo "[plugins] ${name} 未完成，未写 marker（下次启动会重试）" >&2
   fi
-done < <(grep -vE '^[[:space:]]*#' "${LIST}" | sed '/^[[:space:]]*$/d')
+done <<< "${names}"
 
 [ "${failed}" = 0 ] || exit 1

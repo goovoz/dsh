@@ -38,8 +38,6 @@ function recentRetry(req) {
   return new RegExp('(^|;\\s*)' + RETRY_COOKIE + '=').test(req.headers.cookie ?? '')
 }
 
-// DSH 的 API 围栏不只看 Host，还看 Origin/Referer：三者都要换成本地 authority，
-// 否则浏览器发的 /api 请求会 403（插件激活失败、WebSocket 握手失败都是这个原因）。
 // 只有 /api/ 需要把 Origin/Referer 也规整到本地 authority（DSH 的 API 围栏）；
 // 其它路径（含插件自带路由，如 /genn/armor）保留浏览器真实 Origin，
 // 这样插件自己的同源校验仍然有效（否则等于替它放行任意来源）。

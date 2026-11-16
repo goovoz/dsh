@@ -62,7 +62,7 @@ jobs:
         run: |
           set -u
           pinned=$(node -p "require('./package.json').dshVersion")
-          upstream=$(npm view @deepseek-ai/dsh version)
+          upstream=$(node scripts/resolve-upstream-version.mjs)   # 与 bump 一致：跟随 latest/next 里最高的非 alpha 版本
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             sel=""
             case "${{ inputs.dsh_infinite_gen_n }}" in true) sel="$sel,dsh-infinite-gen-n" ;; esac
@@ -104,9 +104,9 @@ jobs:
         run: |
           IMG="ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
           docker run --rm --platform linux/amd64 --entrypoint dsh "$IMG" --version
-          SPEC="${{ steps.v.outputs.spec }}"   # 已解析成具体插件名（push 事件下 plugins=all）
-          echo "plugins=$SPEC"
-          if [ "$SPEC" = "none" ]; then
+          SPEC="${{ steps.v.outputs.spec }}"   # 已解析成具体插件名（push 事件下 plugins=all；none 时为空）
+          echo "plugins=${{ steps.v.outputs.plugins }} spec=$SPEC"
+          if [ "${{ steps.v.outputs.plugins }}" = "none" ]; then
             docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -lc 'test -z "$(ls -A /opt/plugins)" && echo "amd64: no plugins bundled: ok"'
           else
             for name in $(printf '%s' "$SPEC" | tr ',' ' '); do
