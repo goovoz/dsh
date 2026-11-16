@@ -74,7 +74,8 @@ jobs:
             plugins=all
           fi
           suffix=$(bash scripts/resolve-plugins.sh suffix "$plugins")
-          { echo "pinned=$pinned"; echo "upstream=$upstream"; echo "plugins=$plugins"; echo "suffix=$suffix"; } >> "$GITHUB_OUTPUT"
+          spec=$(bash scripts/resolve-plugins.sh spec "$plugins")
+          { echo "pinned=$pinned"; echo "upstream=$upstream"; echo "plugins=$plugins"; echo "suffix=$suffix"; echo "spec=$spec"; } >> "$GITHUB_OUTPUT"
           echo "pinned=$pinned upstream=$upstream plugins=$plugins"
 
       - name: Login to GHCR
@@ -95,6 +96,7 @@ jobs:
             --platform linux/amd64,linux/arm64 \
             --build-arg DSH_VERSION="$VER" \
             --build-arg WITH_PLUGINS="${{ steps.v.outputs.plugins }}" \
+            --build-arg GIT_COMMIT="${{ github.sha }}" \
             $TAG_ARGS \
             --push .
 
@@ -102,7 +104,7 @@ jobs:
         run: |
           IMG="ghcr.io/${{ github.repository_owner }}/dsh:${{ steps.v.outputs.pinned }}${{ steps.v.outputs.suffix }}"
           docker run --rm --platform linux/amd64 --entrypoint dsh "$IMG" --version
-          SPEC="${{ steps.v.outputs.plugins }}"
+          SPEC="${{ steps.v.outputs.spec }}"   # 已解析成具体插件名（push 事件下 plugins=all）
           echo "plugins=$SPEC"
           if [ "$SPEC" = "none" ]; then
             docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -lc 'test -z "$(ls -A /opt/plugins)" && echo "amd64: no plugins bundled: ok"'

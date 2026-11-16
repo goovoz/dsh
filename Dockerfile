@@ -74,6 +74,13 @@ RUN --mount=type=bind,source=plugins,target=/tmp/plugins \
     echo "[build] 最终插件目录: $(ls /opt/plugins | tr '\n' ' ')"; \
     /opt/dsh/scripts/apply-plugin-patches.sh /opt/plugins /tmp/patches
 
+# 构建信息：一条命令回答“我这个镜像里到底有什么”
+ARG GIT_COMMIT=unknown
+RUN printf 'dsh=%s\nplugins=%s\ncommit=%s\nbuilt=%s\nsource=%s\n--- plugins dir ---\n' \
+      "${DSH_VERSION}" "${WITH_PLUGINS}" "${GIT_COMMIT}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "https://github.com/goovoz/dsh" \
+      > /opt/dsh/BUILD-INFO \
+ && ls /opt/plugins >> /opt/dsh/BUILD-INFO \
+ && cat /opt/dsh/BUILD-INFO
 LABEL org.opencontainers.image.title="dsh-web" \
       org.opencontainers.image.description="DeepSeekRuntime (DSH) in a container, browser UI, upstream-tracking" \
       org.opencontainers.image.source="https://github.com/goovoz/dsh" \

@@ -55,6 +55,7 @@ build:
 	  --build-arg DSH_VERSION=$(DSH_VERSION) \
 	  --build-arg WITH_PLUGINS="$(PLUGIN_SPEC)" \
 	  --build-arg WITH_EXTRAS=$(EXTRAS) \
+	  --build-arg GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo local) \
 	  -t $(IMAGE):$(DSH_VERSION)$(SUFFIX) .
 
 build-arm64:
@@ -62,6 +63,7 @@ build-arm64:
 	  --build-arg DSH_VERSION=$(DSH_VERSION) \
 	  --build-arg WITH_PLUGINS="$(PLUGIN_SPEC)" \
 	  --build-arg WITH_EXTRAS=$(EXTRAS) \
+	  --build-arg GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo local) \
 	  -t $(IMAGE):$(DSH_VERSION)$(SUFFIX)-arm64 .
 
 require-public-host:
@@ -116,6 +118,7 @@ ghcr:
 	  --build-arg DSH_VERSION=$(DSH_VERSION) \
 	  --build-arg WITH_PLUGINS="$(PLUGIN_SPEC)" \
 	  --build-arg WITH_EXTRAS=$(EXTRAS) \
+	  --build-arg GIT_COMMIT=$$(git rev-parse --short HEAD 2>/dev/null || echo local) \
 	  -t $(GHCR):$(DSH_VERSION)$(SUFFIX) \
 	  -t $(GHCR):$(ALIAS) \
 	  --push .
