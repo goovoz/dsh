@@ -20,12 +20,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 # 上游 runtime：一条 npm 版本决定一切
-# npm dedupe 把上游 rc.3 里 68 份嵌套 zod 合并（1.2G -> 665M）；rm -rf /root/.npm 去掉构建期缓存约 300M
+# 单层完成：安装 → dedupe（上游 rc.3 有 68 份嵌套 zod，1.2G→665M）→ 删缓存 → 瘦身
+# （瘦身必须在同一层做，否则删掉的文件仍留在下层，镜像不会变小）
 RUN test -n "${DSH_VERSION}" \
  && npm i -g pnpm@10 "@deepseek-ai/dsh@${DSH_VERSION}" \
  && cd /usr/local/lib/node_modules/@deepseek-ai/dsh \
  && npm dedupe --omit=dev --no-audit --no-fund \
  && rm -rf /root/.npm \
+ && NM=/usr/local/lib/node_modules/@deepseek-ai/dsh/node_modules \
+ && find "$NM" -name '*.map' -delete \
+ && find "$NM" -name '*.d.ts' -delete \
+ && find "$NM/@deepseek-ai" -maxdepth 3 -type d -name src -prune -exec rm -rf {} + \
+ && find "$NM/node-pty/prebuilds" -mindepth 1 -maxdepth 1 -type d ! -name 'linux-x64' ! -name 'linux-arm64' -exec rm -rf {} + \
+ && rm -rf /usr/share/doc /usr/share/man /usr/share/locale/* \
+ && echo "[build] node_modules after trim: $(du -sh "$NM" | cut -f1)" \
  && dsh --version
 
 ENV DSH_HOME=/data/dsh \
