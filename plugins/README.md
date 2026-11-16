@@ -26,6 +26,13 @@ qinglong-cli           # 青龙面板客户端
 - 与 `dsh-infinite-gen-n` 同属破甲类，默认只构建后者，避免两个破甲预设打架（预设 id 都是 `armor`，同时启用会 `Duplicate agent preset`）；
 - 需要回退时显式点名：`make build PLUGINS=dsh-armor-gen5`（产物 tag 带 `-plugins-dsh-armor-gen5`）。
 
+**升级时会自动清理它的残留**：老 profile 的 `cordis.patch.yml` 里可能还有 `preset-armor` 行（armor 的
+`dsh-install.sh` 写的），而 `dsh-infinite-gen-n` 在代码里注册的预设 id 也叫 `armor` → 启动报
+`Duplicate agent preset: armor` / `1 entry did not activate`。容器启动时会跑
+`scripts/prune-retired-rows.sh`：未选中 armor 时自动删掉 `preset-armor` 块（含 marker 包裹的整段）、
+`armor-kernel` 副本与 `.plugin-dsh-armor-gen5` 标记；清空到没有条目时恢复 `[]`。日志会打印
+`[prune] 已移除 preset-armor（dsh-armor-gen5 已退役）`。
+
 ## 上游同步（vendored）
 
 插件以**源码快照**形式入库（不是 submodule），来源与策略写在 `plugins/upstreams.tsv`：
