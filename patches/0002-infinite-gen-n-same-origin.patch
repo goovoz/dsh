@@ -1,0 +1,16 @@
+--- a/dsh-infinite-gen-n/index.js	2026-11-16 08:21:41.745593786 +0000
++++ b/dsh-infinite-gen-n/index.js	2026-11-16 08:21:41.770594442 +0000
+@@ -709,7 +709,12 @@
+   try {
+     const url = new URL(origin);
+     if (url.protocol === "dsh-app:") return true;
+-    return url.hostname === "127.0.0.1" || url.hostname === "localhost" || url.hostname === "::1" || url.hostname === "[::1]";
++    if (url.hostname === "127.0.0.1" || url.hostname === "localhost" || url.hostname === "::1" || url.hostname === "[::1]") return true;
++    // 容器化/反代部署：浏览器 origin 是局域网 IP 或域名。网关已把 Host/Origin 规整到同一 authority，
++    // 因此 origin.host 与请求 Host 相同即视为同源（仍是严格同源判断，不是放行任意来源）。
++    const host = String(headers.host || "");
++    if (host && url.host === host) return true;
++    return false;
+   } catch {
+     return false;
+   }

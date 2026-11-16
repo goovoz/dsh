@@ -20,7 +20,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /var/lib/apt/lists/*
 
 # 上游 runtime：一条 npm 版本决定一切
-RUN test -n "${DSH_VERSION}" && npm i -g pnpm@10 "@deepseek-ai/dsh@${DSH_VERSION}" \
+# npm dedupe 把上游 rc.3 里 68 份嵌套 zod 合并（1.2G -> 665M）；rm -rf /root/.npm 去掉构建期缓存约 300M
+RUN test -n "${DSH_VERSION}" \
+ && npm i -g pnpm@10 "@deepseek-ai/dsh@${DSH_VERSION}" \
+ && cd /usr/local/lib/node_modules/@deepseek-ai/dsh \
+ && npm dedupe --omit=dev --no-audit --no-fund \
+ && rm -rf /root/.npm \
  && dsh --version
 
 ENV DSH_HOME=/data/dsh \
