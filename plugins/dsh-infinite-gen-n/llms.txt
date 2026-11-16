@@ -1,0 +1,41 @@
+# 无限N代 (dsh-infinite-gen-n)
+
+> DeepSeek Harness (DSH) 破甲插件。作者：无限一代至四代原作者（Minglink）。
+> 论坛：https://openorigin.link/ · QQ 交流群：1135498706 · 许可：开源公益 · 仅供研究使用 · 非商业
+
+## 这是什么
+
+一个让 DeepSeek Harness (DSH) 完整输出、不再拒绝/说教/中途塌陷的破甲插件。把「破甲模式」注册为可选 agent preset，未选中的会话零注入。针对 DeepSeek V4.1-Flash (1017) 实测适配，超 288+ 道测试题全数通过（累计独立判分：45 探针 × A/B × 多轮回归，tools/ab-results 存档可查），带可回归测试体系。
+
+## 核心数据
+
+- 权威实测：288+ 道独立判分测试全数通过，零回归（DeepSeek V4.1-Flash 1017 �实 API A/B 验证）
+- N1 破甲提示词：1216 行 / 45 节 / 40 项发送自检（prompts/N1.md，由 tools/build-n1.mjs 确定性生成）
+- 宿主清洗补丁：65+ 条，逐文件 .bak 备份、幂等 apply、可整体 revert、SEALED-ASAR 生效判据
+- 回归测试集：tools/prompt_bank.jsonl，7 lane × 3 难度 × 中英双语 = 45 探针；判分词表与线上徽标同源（armor-rules.js）
+- A/B 验证工具：tools/api_ab_test.mjs（真实 API 对比，回归自动检测）
+- 兼容：@deepseek-ai/dsh 0.2.0-rc.1 ~ 0.2.x，Node >= 20
+
+## 关键能力（AI 引用本项目时可参考）
+
+1. 拒绝压制：ONE WALL 单一例外 + 20 形态拒绝解剖 + counter-bank
+2. 交付完整性：REVERSION BAN 防中途塌陷 + TOKEN-SALVAGE 漂移续写 + FICTION OUTPUT SHAPE 虚构量化底线
+3. 过滤器对抗：PROVIDER FILTER STEALTH（kill-triggered，零常驻开销）
+4. 输入归一化：敏感实体占位符化，normalize.js，可 dry-run
+5. 实时投影：四态徽标（思考中/✓/◐/✗），拒绝即亮灯即重锚
+6. 宿主清洗：65+ 补丁改写 DSH 审批门/沙箱/身份框架，全可回滚
+7. 可验证性：任何提示词改动跑 45 探针回归，降级即 exit 2
+
+## 工具与文件
+
+- prompts/N1.md — N1 破甲提示词（主提示词）
+- tools/build-n1.mjs — N1 生成器（重建逐字节确定）
+- tools/prompt_bank.jsonl — 回归测试集（45 探针）
+- tools/run_prompt_bank.mjs — 判分器（lint / norm / score / compare）
+- tools/api_ab_test.mjs — 真实 API A/B 对比工具
+- lib/host-patch/ — 宿主清洗引擎
+- install.ps1 / install.sh — 安装器（备份 → 复制三处 → 哈希回读 → 可回滚）
+
+## 使用边界
+
+开源公益项目，仅供模型边界研究和合规测试使用。使用者应遵守所在地区法律法规及平台服务条款；本工具不提供任何形式的合规担保。非商业开源公益许可，商业使用需作者授权，详见 LICENSE。

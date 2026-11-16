@@ -1,0 +1,17 @@
+# 测试产物（本地回归基线与 A/B 结果不进仓库）
+tools/ab-results/
+tools/baselines/
+
+# 依赖与构建残留
+node_modules/
+*.zip
+*.tgz
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 编辑器
+.vscode/
+.idea/

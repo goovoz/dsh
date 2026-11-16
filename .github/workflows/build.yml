@@ -14,10 +14,16 @@ on:
     - cron: "0 3 * * 1"
   workflow_dispatch:
     inputs:
-      with_plugins:
-        description: "集成第三方插件（plugins/，构建带 -plugins 后缀的镜像）"
-        type: boolean
-        default: false
+      plugins:
+        description: "集成哪些第三方插件（all=按 plugins/enabled.txt；dsh-armor-gen5 已退役，仅显式选择才构建）"
+        type: choice
+        options:
+          - all
+          - dsh-infinite-gen-n
+          - dsh-qinglong-cli
+          - dsh-armor-gen5
+          - none
+        default: all
       release:
         description: "创建 GitHub Release"
         type: boolean
@@ -54,9 +60,9 @@ jobs:
           set -u
           pinned=$(node -p "require('./package.json').dshVersion")
           upstream=$(npm view @deepseek-ai/dsh version)
-          plugins='${{ inputs.with_plugins && 'all' || 'none' }}'
+          plugins='${{ inputs.plugins || 'all' }}'
+          case "$plugins" in ''|0|false) plugins=none ;; 1|true) plugins=all ;; esac
           suffix=$(bash scripts/resolve-plugins.sh suffix "$plugins")
-          case "$plugins" in all|1) plugins=all ;; *) plugins=none ;; esac
           { echo "pinned=$pinned"; echo "upstream=$upstream"; echo "plugins=$plugins"; echo "suffix=$suffix"; } >> "$GITHUB_OUTPUT"
           echo "pinned=$pinned upstream=$upstream plugins=$plugins"
 
@@ -68,13 +74,18 @@ jobs:
           OWNER=${{ github.repository_owner }}
           VER=${{ steps.v.outputs.pinned }}
           SUF=${{ steps.v.outputs.suffix }}
-          if [ -n "$SUF" ]; then ALIAS=latest-plugins; else ALIAS=latest; fi
+          PLUGINS=${{ steps.v.outputs.plugins }}
+          TAG_ARGS="-t ghcr.io/$OWNER/dsh:$VER$SUF"
+          case "$PLUGINS" in
+            all|1) TAG_ARGS="$TAG_ARGS -t ghcr.io/$OWNER/dsh:latest-plugins -t ghcr.io/$OWNER/dsh:latest" ;;
+            none|0|'') TAG_ARGS="$TAG_ARGS -t ghcr.io/$OWNER/dsh:latest" ;;
+            *) TAG_ARGS="$TAG_ARGS -t ghcr.io/$OWNER/dsh:latest-plugins" ;;
+          esac
           docker buildx build \
             --platform linux/amd64,linux/arm64 \
             --build-arg DSH_VERSION="$VER" \
             --build-arg WITH_PLUGINS="${{ steps.v.outputs.plugins }}" \
-            -t "ghcr.io/$OWNER/dsh:$VER$SUF" \
-            -t "ghcr.io/$OWNER/dsh:$ALIAS" \
+            $TAG_ARGS \
             --push .
 
       - name: Smoke test amd64
@@ -84,7 +95,11 @@ jobs:
           if [ "${{ steps.v.outputs.plugins }}" = "none" ]; then
             docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -lc 'test -z "$(ls -A /opt/plugins)" && echo "amd64: no plugins bundled: ok"'
           else
-            docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -lc 'test -d /opt/plugins/dsh-armor-gen5 && echo "amd64: plugins bundled: ok"'
+            echo "plugins=${{ steps.v.outputs.plugins }}"
+            docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -lc 'ls /opt/plugins; test -d /opt/plugins/dsh-infinite-gen-n && echo "amd64: dsh-infinite-gen-n bundled: ok"'
+            if [ "${{ steps.v.outputs.plugins }}" = "all" ]; then
+              docker run --rm --platform linux/amd64 --entrypoint sh "$IMG" -lc 'test ! -d /opt/plugins/dsh-armor-gen5 && echo "amd64: retired dsh-armor-gen5 not bundled: ok"'
+            fi
           fi
 
       - name: Smoke test arm64 (QEMU)

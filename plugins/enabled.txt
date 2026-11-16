@@ -1,4 +1,5 @@
-# 仅当 WITH_PLUGINS=1 / DSH_PLUGINS=1 时才按本清单安装
-# 每行一个要装进镜像并启用的插件目录名（对应 plugins/<name>）
-dsh-armor-gen5
+# 默认集成清单：WITH_PLUGINS=all 时按这里构建（显式逗号列表可绕过）
+# dsh-armor-gen5 已退役：源码仍保留在 plugins/dsh-armor-gen5，默认不构建/不安装，
+#   破甲类由 dsh-infinite-gen-n 取代；确实需要时用 PLUGINS=dsh-armor-gen5 显式构建。
+dsh-infinite-gen-n
 qinglong-cli

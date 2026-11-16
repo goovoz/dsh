@@ -12,7 +12,7 @@
 | 持久化 | `$DSH_HOME`、workspace、会话、插件、凭据都在 `./data` 卷 |
 | 多架构 | 镜像不含原生二进制，`amd64` / `arm64` 都能直接构建 |
 
-> 默认构建不集成第三方插件；需要时 make build PLUGINS=1（镜像 tag 带 -plugins）。
+> 默认构建**带插件**（`WITH_PLUGINS=all`）：`dsh-infinite-gen-n`（破甲）+ `qinglong-cli`；`PLUGINS=none` 可要纯净版。
 
 ## 快速开始
 
@@ -65,34 +65,55 @@ vendored 目录需要重新拷贝或转成 submodule。
 
 ## 插件库
 
-默认不集成：WITH_PLUGINS=0 时镜像里没有 /opt/plugins 内容（构建期用 BuildKit mount 决定是否拷入），CI 同样默认不集成，需要时在 workflow_dispatch 勾 with_plugins。
+默认构建**带插件**（`WITH_PLUGINS=all` → 按 `plugins/enabled.txt`）：
 
+| 插件 | 说明 |
+|---|---|
+| `dsh-infinite-gen-n` | 破甲插件（无限N代），v1.1.0，vendored 并定期同步上游 |
+| `qinglong-cli` | 青龙面板客户端（本仓库自维护） |
 
-```
-plugins/
-├── enabled.txt              # 每行一个要启用的插件目录名
-├── README.md                # 加插件的三种姿势
-├── _template/               # 新插件模板（含 dsh-install.sh 钩子）
-└── dsh-armor-gen5/          # 示例：vendored 插件，自带后置脚本
-```
+`dsh-armor-gen5` **已退役**：源码保留在 `plugins/dsh-armor-gen5/`，但不在默认清单里，
+镜像默认不含它（两者预设 id 都叫 `armor`，同时启用会 `Duplicate agent preset`）。
+要回退：`make build PLUGINS=dsh-armor-gen5`。
 
-加一个作者的插件：
+### 构建参数 / CI 下拉
 
-```bash
-git submodule add https://github.com/<owner>/<plugin>.git plugins/<plugin>   # 或 cp -a 直接拷
-echo <plugin> >> plugins/enabled.txt
-make build && make up
-```
+| 取值 | 行为 |
+|---|---|
+| `all`（默认） | 按 `enabled.txt` 构建 |
+| `none` | 不带插件 |
+| `dsh-infinite-gen-n` / `dsh-qinglong-cli` / `dsh-armor-gen5` | 只带选中的那个 |
 
-启动时 `scripts/install-plugins.sh` 会：
+手动触发 `build` workflow 时，`plugins` 是下拉框，默认 `all`；也可以命令行 `make build PLUGINS=...`。
 
-1. `dsh plugin --profile web add file:/opt/plugins/<plugin>`（幂等，profile 在卷里）；
-2. 若插件目录有可执行的 `dsh-install.sh`，接着执行它，环境变量 `PROFILE_DIR` / `PLUGIN_DIR` 已就位。
+### 上游同步
 
-后置脚本用来处理“装完还要做点什么”的插件，例如 `dsh-armor-gen5` 需要把内核副本放进 profile，
-并把 `preset-armor` 行写进 `cordis.patch.yml`（预设注册表在 web-app 的 entry-local realm，
-bundle 层看不到它，只能在 profile patch 里声明）。
+插件以**源码快照**入库，来源与策略在 `plugins/upstreams.tsv`：
 
+| mode | 行为 |
+|---|---|
+| `vendor` | 每周一 05:00 UTC（或手动）由 `scripts/sync-vendored-plugins.sh` 拉上游 tar 比对，有变化就覆盖、提交并自动派发一次构建 |
+| `offline` | 永不自动同步（如已退役的 armor、本仓库自维护的 qinglong-cli） |
+
+**上游删库/不可达时保留上一版**：脚本判定 HTTP 非 200 / 解包失败后只打印
+`上游不可用（HTTP 404）→ 保留本地版本 x.y.z，不删代码` 并正常退出，仓库里始终留有最后可用快照。
+
+### 安装钩子
+
+`dsh plugin add` 之后会执行插件目录里的 `dsh-install.sh`（环境变量 `PROFILE_DIR` / `PLUGIN_DIR`）。
+`dsh-infinite-gen-n` 的钩子做三件事（幂等）：补全被上游 `package.json#files` 过滤掉的 `lib/`；
+补装 `preset-rows.js` 引用但 profile 解析不到的 `@deepseek-ai/*`；过滤宿主版本根本加载不到的 preset 行
+（例如 `dsh-tool-office` 只有 `rc.2/rc.3`，宿主是 `rc.1`），否则注册时 `BROKEN` 会让整个破甲预设不可选。
+
+### 镜像 tag
+
+| 选择 | tag |
+|---|---|
+| `all` | `:<dshVersion>-plugins`、`:latest-plugins`、`:latest` |
+| `none` | `:<dshVersion>`、`:latest` |
+| 单个插件 | `:<dshVersion>-plugins-<name>`、`:latest-plugins` |
+
+更多细节（新增插件、补丁机制、模板）见 [plugins/README.md](plugins/README.md)。
 ## 插件补丁：preset 自检修正
 
 `dsh-armor-gen5` 0.3.0 的部署自检项 `preset-patch` 里，路径被写死成 `$DSH_HOME/profiles/desktop/cordis.patch.yml`：

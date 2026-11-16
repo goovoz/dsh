@@ -1,0 +1,52 @@
+name: sync-plugins
+
+on:
+  schedule:
+    - cron: '0 5 * * 1'      # 每周一 05:00 UTC
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '只检查不提交'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: sync-plugins
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync vendored plugins
+        run: SYNC_DRY_RUN=${{ inputs.dry_run && '1' || '0' }} bash scripts/sync-vendored-plugins.sh
+
+      - name: Commit when changed
+        id: c
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then echo "changed=0" >> "$GITHUB_OUTPUT"; echo '无变化'; exit 0; fi
+          echo "changed=1" >> "$GITHUB_OUTPUT"
+          git status --short | head -20
+
+      - name: Push commit
+        if: steps.c.outputs.changed == '1' && inputs.dry_run != true
+        run: |
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git add -A plugins
+          git commit -m "chore(plugins): 同步上游 vendored 插件"
+          git push
+
+      - name: Trigger rebuild
+        if: steps.c.outputs.changed == '1' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run build.yml --ref master -f plugins=all -f release=false

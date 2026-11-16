@@ -43,8 +43,11 @@ COPY capture.mjs gateway.mjs entrypoint.sh /opt/dsh/
 RUN chmod +x /opt/dsh/entrypoint.sh /opt/dsh/scripts/*.sh
 
 # 注意：下面这行用了 RUN --mount，需要 BuildKit（Docker 23+ 默认开启；DOCKER_BUILDKIT=0 会失败）
-# 插件选择：all/1 = 全部；none/0 = 不带；逗号列表 = 只带这些。
-# 列出 enabled.txt 与目录白名单，未选中的插件目录直接从镜像里删掉，构建期就校验插件名是否存在。
+# 插件选择：
+#   WITH_PLUGINS=all | 1        → 按 plugins/enabled.txt（默认：dsh-infinite-gen-n、qinglong-cli）
+#   WITH_PLUGINS=none | 0 | ''  → 不带插件
+#   WITH_PLUGINS=a,b,c          → 只带这些（未选中的目录不会进入镜像）
+# 退役插件（dsh-armor-gen5）源码保留在仓库，但不进默认镜像；显式点名才会构建。
 RUN --mount=type=bind,source=plugins,target=/tmp/plugins \
     --mount=type=bind,source=patches,target=/tmp/patches \
     set -eu; \
@@ -53,22 +56,22 @@ RUN --mount=type=bind,source=plugins,target=/tmp/plugins \
       0|none|'') echo "[build] 第三方插件未集成（WITH_PLUGINS=$spec）"; exit 0 ;; \
     esac; \
     cp -a /tmp/plugins/. /opt/plugins/; \
-    if [ "$spec" != "all" ] && [ "$spec" != "1" ]; then \
+    if [ "$spec" = "all" ] || [ "$spec" = "1" ]; then \
+      list=$(grep -vE '^[[:space:]]*(#|$)' /opt/plugins/enabled.txt | tr '\n' ' '); \
+      echo "[build] 按 enabled.txt 集成: $list"; \
+    else \
       list=$(printf '%s' "$spec" | tr ',' ' '); \
       printf '%s\n' $list > /opt/plugins/enabled.txt; \
-      for name in $list; do \
-        if [ ! -d "/opt/plugins/$name" ]; then \
-          echo "[build] 未知插件: $name（可选：$(ls /opt/plugins | tr '\n' ' ')）" >&2; exit 1; \
-        fi; \
-      done; \
-      for d in /opt/plugins/*/; do \
-        name=$(basename "$d"); \
-        case " $list " in *" $name "*) ;; *) rm -rf "$d" ;; esac; \
-      done; \
-      echo "[build] 只集成插件: $list"; \
-    else \
-      echo "[build] 集成全部插件: $(ls /opt/plugins | tr '\n' ' ')"; \
+      echo "[build] 只集成: $list"; \
     fi; \
+    for name in $list; do \
+      [ -d "/opt/plugins/$name" ] || { echo "[build] 未知插件: $name（可选：$(ls /opt/plugins | tr '\n' ' ')）" >&2; exit 1; }; \
+    done; \
+    for d in /opt/plugins/*/; do \
+      name=$(basename "$d"); \
+      case " $list " in *" $name "*) ;; *) rm -rf "$d" ;; esac; \
+    done; \
+    echo "[build] 最终插件目录: $(ls /opt/plugins | tr '\n' ' ')"; \
     /opt/dsh/scripts/apply-plugin-patches.sh /opt/plugins /tmp/patches
 
 LABEL org.opencontainers.image.title="dsh-web" \
