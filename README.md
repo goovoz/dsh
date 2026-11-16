@@ -232,6 +232,28 @@ diff -u plugins/<plugin>/<file> <改好的文件> > patches/0002-<plugin>-<说�
 
 手动重跑（例如刚在 UI 里加了新模型）：`docker exec dsh-web /opt/dsh/scripts/enable-vision.sh`。
 
+### 升级镜像后出现大量「disabling profile plugin row …」
+
+原因：profile 是旧版本 dsh 建的（例如 rc.1），其中的插件/扩展版本也是 rc.1；换成新核心（rc.3）后，
+核心会把所有 rc.1 的插件行判为 incompatible 并禁用——这是**保护行为**，不是镜像坏了。
+
+本仓库已处理：`scripts/install-extras.sh` 与 `scripts/install-plugins.sh` 的 marker 里带上了 dsh 版本，
+升级后首启会**自动按新版本重装** extras 与插件（实测 0 条禁用）。日志形如：
+
+```
+[extras] dsh=0.2.2-rc.3
+[extras] @deepseek-ai/dsh-experimental-terminal-bundle 解析 0.2.2-rc.3（exact）
+[extras] … ok
+```
+
+仍想手动强制重装：
+
+```bash
+docker exec dsh-web rm -f /data/dsh/profiles/web/.dsh-web-extras /data/dsh/profiles/web/.plugin-*
+docker restart dsh-web
+```
+
+如果 `dsh plugin add` 失败，现在会把 pnpm/dsh 的真实报错打印出来（以前被吞掉了），照报错处理即可。
 ## 排错
 
 | 现象 | 处理 |

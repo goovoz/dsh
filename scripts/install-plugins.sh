@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 按 plugins/enabled.txt 把插件装进 profile，并执行插件自带的后置脚本
-# 只有 add 与后置脚本都成功才写 marker，避免半配置被永久跳过
+# stamp 里带 dsh 版本：升级核心后自动重装；失败时打印真实报错并留在下次重试
 set -uo pipefail
 PROFILE="${PROFILE:-web}"
 PROFILE_DIR="${PROFILE_DIR:-${DSH_HOME:-/data/dsh}/profiles/${PROFILE}}"
@@ -9,6 +9,7 @@ LIST="${ROOT}/enabled.txt"
 
 [ -f "${LIST}" ] || { echo "[plugins] 没有 enabled.txt，跳过"; exit 0; }
 mkdir -p "${PROFILE_DIR}"
+dsh_v="$(dsh --version 2>/dev/null | tail -1)"
 
 failed=0
 while IFS= read -r name; do
@@ -21,14 +22,16 @@ while IFS= read -r name; do
   else
     stamp="stat:$(cd "${dir}" && stat -c '%Y-%s' package.json 2>/dev/null || echo 0)"
   fi
+  stamp="dsh=${dsh_v};${stamp}"
   marker="${PROFILE_DIR}/.plugin-${name}"
   if [ -f "${marker}" ] && [ "$(cat "${marker}")" = "${stamp}" ]; then
     echo "[plugins] ${name} 已就绪"; continue
   fi
   echo "[plugins] 安装 ${name}"
   ok=1
-  if ! dsh plugin --profile "${PROFILE}" add "file:${dir}" >/dev/null 2>&1; then
+  if ! out=$(dsh plugin --profile "${PROFILE}" add "file:${dir}" 2>&1); then
     echo "[plugins] dsh plugin add 失败：${name}" >&2
+    printf '%s\n' "${out}" | tail -15 >&2
     ok=0
   fi
   if [ "${ok}" = 1 ] && [ -x "${dir}/dsh-install.sh" ]; then
