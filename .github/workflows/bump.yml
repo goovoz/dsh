@@ -25,7 +25,7 @@ jobs:
         run: |
           set -u
           pinned=$(node -p "require('./package.json').dshVersion")
-          upstream=$(npm view @deepseek-ai/dsh version)
+          upstream=$(node scripts/resolve-upstream-version.mjs)   # 跟随 latest/next 里最高的非 alpha 版本
           echo "pinned=$pinned upstream=$upstream"
           echo "pinned=$pinned" >> "$GITHUB_OUTPUT"
           echo "upstream=$upstream" >> "$GITHUB_OUTPUT"

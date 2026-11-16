@@ -29,7 +29,11 @@ PUBLIC_HOST=192.168.1.10:8899 make up
 
 ## 随上游更新（自动）
 
-`bump.yml` 每天 04:00 UTC 检查一次 npm 上的 `@deepseek-ai/dsh`：
+`bump.yml` 每天 04:00 UTC 检查一次 npm 上的 `@deepseek-ai/dsh`。
+
+**取哪个版本**：`scripts/resolve-upstream-version.mjs`（`DSH_CHANNEL=auto|latest|next`，默认 `auto`）
+取 `latest`、`next` 等所有非 `alpha` 版本里**最高**的那个——上游曾把 `0.2.2-rc.2/rc.3` 只发在 `next` 下、
+`latest` 仍停在 `rc.1`，只看 `npm view … version`（= `latest`）会永远判成“已是最新”。
 
 1. 上游比 `package.json#dshVersion` 新 → 自动提交 `chore: bump dsh to <v>` 并 push；
 2. 用 `GITHUB_TOKEN` 显式派发 `build.yml`（token 触发的 push 不会连带触发别的 workflow，所以必须 dispatch）；
@@ -55,7 +59,7 @@ make build && make up
 | 2 | 同 major.minor 最高 | 没精确版本时在 `x.y.*` 里取最高（含预发布），避免跨 minor 混搭 |
 | 3 | latest | 前两级都落空才退回 dist-tag `latest` |
 
-示例：`[extras] @deepseek-ai/dsh-experimental-terminal-bundle 解析 0.2.2-rc.1（exact）`。
+示例：`[extras] @deepseek-ai/dsh-experimental-terminal-bundle 解析 0.2.2-rc.3（exact）`。
 注意 npm 的 `view <pkg>@<range>` 不支持语义化范围（会 404），所以解析器拉全量 `versions` 自己比。
 
 ### 第三方插件

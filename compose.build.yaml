@@ -9,6 +9,6 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        DSH_VERSION: ${DSH_VERSION:-0.2.2-rc.1}
+        DSH_VERSION: ${DSH_VERSION:-0.2.2-rc.3}
         WITH_EXTRAS: ${WITH_EXTRAS:-1}
         WITH_PLUGINS: ${WITH_PLUGINS:-all}

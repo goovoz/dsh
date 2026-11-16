@@ -101,10 +101,10 @@ shell:
 	docker exec -it $(CONTAINER_NAME) bash
 
 latest:
-	@npm view @deepseek-ai/dsh version
+	@node scripts/resolve-upstream-version.mjs
 
 bump:
-	@v=$$(npm view @deepseek-ai/dsh version); \
+	@v=$$(node scripts/resolve-upstream-version.mjs); \
 	old=$$(node -e "console.log(require('./package.json').dshVersion)"); \
 	if [ "$$v" = "$$old" ]; then echo "已是最新 $$v"; exit 0; fi; \
 	node -e "const f='package.json';const p=require('./'+f);p.dshVersion='$$v';require('fs').writeFileSync(f,JSON.stringify(p,null,2)+'\n')"; \
