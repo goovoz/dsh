@@ -27,10 +27,15 @@ if [ -d "$GLOBAL_NM/@deepseek-ai" ]; then
   mkdir -p "$DEST_NM/@deepseek-ai"
   linked=0
   for base in $names; do
+    pkg="@deepseek-ai/$base"
     src="$GLOBAL_NM/@deepseek-ai/$base"
     dst="$DEST_NM/@deepseek-ai/$base"
     [ -d "$src" ] || continue
-    [ -e "$dst" ] && continue
+    # 已经能 import 就跳过；否则重建软链（pnpm 安装会把不在 package.json 里的目录剪掉，或留下坏副本）
+    if (cd "$target" && node --input-type=module -e "import('$pkg').then(()=>process.exit(0),()=>process.exit(1))" >/dev/null 2>&1); then
+      continue
+    fi
+    rm -rf "$dst" 2>/dev/null
     ln -s "$src" "$dst" 2>/dev/null && linked=$((linked+1))
   done
   [ "$linked" = 0 ] || echo "[gen-n] 已软链 $linked 个预设依赖（来自镜像内置包，无需联网安装）"
