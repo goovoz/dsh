@@ -90,7 +90,7 @@ fi
 # 破甲补丁：web/Linux 下 dsh 跑的是镜像里的全局安装，插件默认只扫 profile，
 # 这里在启动前把补丁幂等应用到全局 base（+ profile base），否则 48 条补丁一直是 pending。
 if [ "${DSH_ARMOR_AUTOAPPLY:-1}" = "1" ] && [ -d /opt/plugins/dsh-infinite-gen-n ]; then
-  node /opt/plugins/dsh-infinite-gen-n/dsh-boot-apply.mjs || echo "[entrypoint] 破甲补丁应用失败（继续启动）"
+  node /opt/dsh/scripts/armor-rc3.mjs || echo "[entrypoint] 破甲补丁应用失败（继续启动）"
 fi
 # 清理已退役插件残留的 profile 行（dsh-armor-gen5 的 preset-armor 会与 gen-n 抢同名预设）
 /opt/dsh/scripts/prune-retired-rows.sh || echo "[entrypoint] 清理退役 profile 行失败（继续启动）"
