@@ -8064,10 +8064,11 @@ for (const p of ALL_PATCHES) {
 
 // rc.3 第二批：字符串搬家 / 文案改写
 const RC3_FILE_MOVES = new Map([
-  [32, 'harness-dev-context'],
-  [53, 'harness-dev-context'],
-  [54, 'deliverable-file-references'],
-  [60, 'escalation'],
+  // 数组形式：pathsOf 会跳过解析不到的 key —— 桌面端没有新包时自动落回旧位置，行为不变。
+  [32, ['harness-dev-context', 'web-app-lib']],
+  [53, ['harness-dev-context', 'web-app-lib']],
+  [54, ['deliverable-file-references', 'deliverables-prompt']],
+  [60, ['escalation', 'dsh-tools', 'dsh-tools-ptc']],
 ])
 for (const p of ALL_PATCHES) {
   if (String(p.id) === '32' || String(p.id) === '53' || String(p.id) === '60') p.skipIfMarked = false
