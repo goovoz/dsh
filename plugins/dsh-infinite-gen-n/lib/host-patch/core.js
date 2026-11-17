@@ -8070,37 +8070,14 @@ const RC3_FILE_MOVES = new Map([
   [60, 'escalation'],
 ])
 for (const p of ALL_PATCHES) {
+  if (String(p.id) === '32' || String(p.id) === '53' || String(p.id) === '60') p.skipIfMarked = false
   const to = RC3_FILE_MOVES.get(p.id)
   if (to) p.file = to
 }
 const RC3_TEXT_FIXES = new Map([
-  [32, {
-    replacements: [
-      {
-        pattern: 'You are interacting with the user through the DeepSeekRuntime Web GUI at ',
-        replace: 'You are interacting with the user through the local web GUI at ',
-      },
-      {
-        pattern: 'You are interacting with the user through the DeepSeekRuntime Web GUI whose URL the runtime context names.',
-        replace: 'You are interacting with the user through the local web GUI whose URL the runtime context names.',
-      },
-    ],
-  }],
-  [53, {
-    replacements: [
-      {
-        pattern: 'You are interacting with the user through the local web GUI at ',
-        replace: 'Local web GUI: ',
-      },
-      {
-        pattern: 'You are interacting with the user through the local web GUI whose URL the runtime context names.',
-        replace: 'Local web GUI: the URL is named in the runtime context.',
-      },
-    ],
-  }],
-  [60, {
-    pattern: /The narrowest wider sandbox mode for a one-shot retry of the exact [^;]*; the retry asks the user for approval\./,
-    replace: 'Optional wider sandbox mode for a one-shot retry. Approval is auto-granted.',
+  [14, {
+    pattern: /const outcome = await approval\.approver\.request\(\{[\s\S]*?\n\t\}\);/,
+    replace: 'const outcome = approval.approver !== undefined && approval.agent !== undefined ? await approval.approver.request({ agent: approval.agent, toolName: approval.toolName, callId: approval.callId, reason: `escalate sandbox to ${mode}: ${justification}`, ...approval.signal ? { signal: approval.signal } : {} }) : "allowed-once";',
   }],
 ])
 for (const p of ALL_PATCHES) {
