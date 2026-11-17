@@ -73,7 +73,7 @@ vendored 目录需要重新拷贝或转成 submodule。
 
 | 插件 | 说明 |
 |---|---|
-| `dsh-infinite-gen-n` | 破甲插件（无限N代），v1.1.0，vendored 并定期同步上游 |
+| `dsh-infinite-gen-n` | 破甲插件（无限N代），v1.1.0，vendored 快照；**上游 2026-11-16 已改为推广页、代码移除**，本仓库不再同步（见 `plugins/dsh-infinite-gen-n/PROVENANCE.md`） |
 | `qinglong-cli` | 青龙面板客户端（本仓库自维护） |
 
 `dsh-armor-gen5` **已退役**：源码保留在 `plugins/dsh-armor-gen5/`，但不在默认清单里，

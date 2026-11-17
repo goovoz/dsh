@@ -1,6 +1,6 @@
 # name	upstream	ref	mode	note
 # mode=vendor  由 scripts/sync-vendored-plugins.sh 定期从上游同步（上游不可用时保留本地快照）
 # mode=offline 上游已不可达/已退役，只保留本地快照，永不自动同步
-dsh-infinite-gen-n	https://github.com/Minglink/dsh-infinite-gen-n	main	vendor	破甲插件（无限N代）
+dsh-infinite-gen-n	https://github.com/Minglink/dsh-infinite-gen-n	main	offline	破甲插件（无限N代）；上游 2026-11-16 起改为推广落地页、代码已移除，本仓库保留 v1.1.0 快照（见该目录 PROVENANCE.md），不再同步
 dsh-armor-gen5	https://github.com/Minglink/dsh-armor-gen5	master	offline	上游不可达且已被 dsh-infinite-gen-n 取代
 qinglong-cli				offline	本仓库自维护

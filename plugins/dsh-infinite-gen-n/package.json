@@ -12,6 +12,7 @@
     "./dump": "./dump.js"
   },
   "files": [
+    "lib",
     "preset-rows.js",
     "normalize.js",
     "armor-rules.js",

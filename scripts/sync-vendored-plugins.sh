@@ -34,6 +34,12 @@ while IFS=$'\t' read -r name url ref mode note; do
     unavailable=$((unavailable+1))
     continue
   fi
+  # 安全闸：上游把仓库改成落地页/清空代码时，避免用空壳覆盖本地可用快照
+  if [ ! -f "$tmp/${name}/package.json" ] || [ ! -f "$tmp/${name}/index.js" ]; then
+    echo "[sync] ${name}: 上游缺 package.json/index.js（看起来代码被移除）→ 保留本地版本 $(version_of "$dest")，不覆盖"
+    unavailable=$((unavailable+1))
+    continue
+  fi
   # 仓库自维护的 dsh-install.sh 不在上游里，同步时保留
   if [ -f "$dest/dsh-install.sh" ]; then cp -a "$dest/dsh-install.sh" "$tmp/${name}/dsh-install.sh"; fi
   if diff -qr "$dest" "$tmp/${name}" >/dev/null 2>&1; then

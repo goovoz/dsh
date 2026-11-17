@@ -45,8 +45,8 @@ dsh-armor-gen5	…	master	offline	上游不可达且已被 gen-n 取代
 
 | mode | 行为 |
 |---|---|
-| `vendor` | 每周一 05:00 UTC（或手动）由 `scripts/sync-vendored-plugins.sh` 拉上游 tar 包比对，有变化就覆盖并提交，然后自动派发一次构建 |
-| `offline` | 永不自动同步，只保留本地快照 |
+| `vendor` | 每周一 05:00 UTC（或手动）由 `scripts/sync-vendored-plugins.sh` 拉上游 tar 包比对，有变化就覆盖并提交，然后自动派发一次构建；上游缺少 `package.json`/`index.js`（代码被移除）时**拒绝覆盖**，保留本地快照 |
+| `offline` | 永不自动同步，只保留本地快照（`dsh-infinite-gen-n` 现在就是：上游已改为推广页、代码移除，见该目录 `PROVENANCE.md`） |
 
 **上游删库/不可达时**：脚本以 HTTP 非 200 或解包失败判定，**保留当前快照、不删任何文件**，只打印
 `上游不可用（HTTP 404）→ 保留本地版本 x.y.z，不删代码` 并以 0 退出。仓库里永远留有最后可用版本。
