@@ -369,10 +369,6 @@ window.__ModuleLoader__.load({
               " 个 · 还没打 ", react.createElement("b", null, h.pending),
               " 个 · 自动跳过 ", react.createElement("b", null, h.skipped),
               " 个 · 不适用 ", react.createElement("b", null, h.na), " 个"),
-            st.sealed
-              ? react.createElement("p", { style: Object.assign({}, MUTED, { margin: "6px 0 0" }) },
-                  "补丁已写进 resources/app，但 app.asar 还在（密封态）：重启 DSH 才会真正用上 app/ 目录。点「一键破甲」会安排把 app.asar 换成 app.asar.bak。web 容器没有密封包，所以那边不存在这一步。")
-              : null,
             (h.items && h.items.length)
               ? react.createElement("details", { style: { margin: "8px 0 0" } },
                   react.createElement("summary", { style: Object.assign({}, MUTED, { cursor: "pointer" }) },
