@@ -22,8 +22,11 @@ while IFS= read -r name; do
   # （否则每次升级镜像都要重装几十个依赖，首启 4-5 分钟）
   pkgver=$(node -e "try{console.log(require(process.argv[1]+'/package.json').version)}catch(e){console.log('0')}" "${dir}" 2>/dev/null || echo 0)
   patchset=$(cat /opt/dsh/PATCHSET 2>/dev/null || echo none)
+  # 还要算插件源码本身的指纹：镜像里改了插件代码（比如我们的 hooks/core 补丁）但版本号没变时，
+  # 只有源码哈希变了才会重装，否则 profile 里会一直用旧副本。
+  srchash=$(cd "${dir}" && find . -type f -not -path './node_modules/*' -print0 2>/dev/null | sort -z | xargs -0 sha1sum 2>/dev/null | sha1sum | cut -c1-12)
   if [ -n "${pkgver}" ]; then
-    stamp="pkg=${pkgver};patch=${patchset}"
+    stamp="pkg=${pkgver};src=${srchash:-0};patch=${patchset}"
   elif git -C "${dir}" rev-parse --verify HEAD >/dev/null 2>&1; then
     stamp="git:$(git -C "${dir}" rev-parse HEAD)"
   else
