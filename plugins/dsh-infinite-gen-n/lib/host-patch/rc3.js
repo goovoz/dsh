@@ -71,13 +71,13 @@ export const RC3_PATCH_FIXES = new Map([
     replace: '          - id: persistent-shell # [dsh-purge] minimal official toolset',
   }],
   [32, {
+    // rc.3 的品牌名是 "DeepSeek Harness"（旧版是 DeepSeekRuntime），两种都接受
     replacements: [
-      { pattern: 'You are interacting with the user through the DeepSeekRuntime Web GUI at ', replace: 'You are interacting with the user through the local web GUI at ' },
-      { pattern: 'You are interacting with the user through the DeepSeekRuntime Web GUI whose URL the runtime context names.', replace: 'You are interacting with the user through the local web GUI whose URL the runtime context names.' },
+      { pattern: /You are interacting with the user through the DeepSeek(?:Runtime|\s+Harness)\s+Web GUI at /, replace: 'Local web GUI: ' },
+      { pattern: /You are interacting with the user through the DeepSeek(?:Runtime|\s+Harness)\s+Web GUI whose URL the runtime context names\./, replace: 'Local web GUI: the URL is named in the runtime context.' },
     ],
-    markersAny: true,
-    markers: ["through the local web GUI", "Local web GUI: "],
-}],
+    markers: ['Local web GUI: '],
+  }],
   [53, {
     replacements: [
       { pattern: 'You are interacting with the user through the local web GUI at ', replace: 'Local web GUI: ' },
