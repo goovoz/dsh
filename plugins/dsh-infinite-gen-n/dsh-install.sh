@@ -90,9 +90,10 @@ JS
 # createRequire 以 preset-rows.js 为基准解析，与 cwd 无关
 filtered=$(cd "$target" && node /tmp/gen-n-filter.mjs "$target/preset-rows.js" 2>/dev/null || true)
 echo "[gen-n] preset 行过滤：${filtered:-skipped}"
-src_rows=$(grep -c '"id":' "$PLUGIN_DIR/preset-rows.js" 2>/dev/null || echo 0)
+# 期望行数用 node 求值（preset-rows.js 里 Windows 专属行在 Linux 上不导出，静态 grep 会多算）
+src_rows=$(cd "$target" && node -e "import('./preset-rows.js').then(m=>console.log((m.ROWS||[]).length)).catch(()=>console.log(0))" 2>/dev/null)
 kept_rows=$(printf '%s' "$filtered" | sed -n 's/.*"kept":\([0-9]\+\).*/\1/p')
-if [ -n "$kept_rows" ] && [ "$src_rows" != "0" ] && [ "$kept_rows" -lt "$src_rows" ]; then
-  echo "[gen-n] 警告：预设行只保留 $kept_rows / 源 $src_rows，可能有依赖缺失被永久丢弃" >&2
+if [ -n "$kept_rows" ] && [ -n "$src_rows" ] && [ "$src_rows" != "0" ] && [ "$kept_rows" -lt "$src_rows" ]; then
+  echo "[gen-n] 警告：预设行只保留 $kept_rows / 有效 $src_rows，可能有依赖缺失被永久丢弃" >&2
 fi
 exit 0
