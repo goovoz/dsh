@@ -6258,6 +6258,14 @@ export function targetFiles(aiBase, dshHome = findDshHome()) {
       path.join(aiBase, "dsh-agent-instructions", "lib", "index.js"),
       ...(root ? [path.join(root, "packages", "context", "agent-instructions", "lib", "index.js")] : []),
     ]),
+    // rc.3：Web surface 身份文案移到了 dsh-harness-dev-context
+    "harness-dev-context": firstExisting([
+      path.join(aiBase, "dsh-harness-dev-context", "lib", "index.js"),
+    ]),
+    // rc.3：deliverable 的 "Do not call present ..." 移到了 dsh-deliverable-file-references
+    "deliverable-file-references": firstExisting([
+      path.join(aiBase, "dsh-deliverable-file-references", "lib", "index.js"),
+    ]),
     "agent-instructions-bootstrap": firstExisting([
       path.join(aiBase, "dsh-agent-instructions", "lib", "bootstrap.js"),
       ...(root ? [path.join(root, "packages", "context", "agent-instructions", "lib", "bootstrap.js")] : []),
@@ -6791,7 +6799,8 @@ function fileKeysOf(p) {
 export function hookDenyPaths(aiBase) {
   const files = targetFiles(aiBase);
   const out = [];
-  for (const p of ALL_PATCHES) {
+  
+for (const p of ALL_PATCHES) {
     if (!hooksDeny.HOOK_DENY_PATCH_IDS.includes(p.id)) continue;
     for (const key of fileKeysOf(p)) {
       for (const fp of pathsOf(files, key)) {
@@ -8051,4 +8060,52 @@ const RC3_PATTERN_FIXES = new Map([
 for (const p of ALL_PATCHES) {
   const fix = RC3_PATTERN_FIXES.get(p.id)
   if (fix && Array.isArray(p.replacements) && p.replacements[0]) Object.assign(p.replacements[0], fix)
+}
+
+// rc.3 第二批：字符串搬家 / 文案改写
+const RC3_FILE_MOVES = new Map([
+  [32, 'harness-dev-context'],
+  [53, 'harness-dev-context'],
+  [54, 'deliverable-file-references'],
+  [60, 'escalation'],
+])
+for (const p of ALL_PATCHES) {
+  const to = RC3_FILE_MOVES.get(p.id)
+  if (to) p.file = to
+}
+const RC3_TEXT_FIXES = new Map([
+  [32, {
+    replacements: [
+      {
+        pattern: 'You are interacting with the user through the DeepSeekRuntime Web GUI at ',
+        replace: 'You are interacting with the user through the local web GUI at ',
+      },
+      {
+        pattern: 'You are interacting with the user through the DeepSeekRuntime Web GUI whose URL the runtime context names.',
+        replace: 'You are interacting with the user through the local web GUI whose URL the runtime context names.',
+      },
+    ],
+  }],
+  [53, {
+    replacements: [
+      {
+        pattern: 'You are interacting with the user through the local web GUI at ',
+        replace: 'Local web GUI: ',
+      },
+      {
+        pattern: 'You are interacting with the user through the local web GUI whose URL the runtime context names.',
+        replace: 'Local web GUI: the URL is named in the runtime context.',
+      },
+    ],
+  }],
+  [60, {
+    pattern: /The narrowest wider sandbox mode for a one-shot retry of the exact [^;]*; the retry asks the user for approval\./,
+    replace: 'Optional wider sandbox mode for a one-shot retry. Approval is auto-granted.',
+  }],
+])
+for (const p of ALL_PATCHES) {
+  const fix = RC3_TEXT_FIXES.get(p.id)
+  if (!fix) continue
+  if (Array.isArray(fix.replacements)) p.replacements = fix.replacements
+  else if (Array.isArray(p.replacements) && p.replacements[0]) Object.assign(p.replacements[0], fix)
 }
