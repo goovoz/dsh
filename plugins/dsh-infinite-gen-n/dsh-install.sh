@@ -18,6 +18,23 @@ echo "[gen-n] 已补全安装副本：$target"
 
 # ---- 2) 预设行依赖补齐
 names=$(grep -o '"@deepseek-ai/[A-Za-z0-9./_-]*"' "$PLUGIN_DIR/preset-rows.js" | tr -d '"' | sed 's|@deepseek-ai/||' | cut -d/ -f1 | sort -u)
+
+# 2a) 先软链镜像里已有的全局包：镜像本来就自带这些 @deepseek-ai/dsh-*（且版本与核心一致），
+#     软链比 pnpm 安装快两个数量级（首次启动从 4-5 分钟降到秒级）。
+GLOBAL_NM=/usr/local/lib/node_modules/@deepseek-ai/dsh/node_modules
+DEST_NM="$PROFILE_DIR/node_modules"
+if [ -d "$GLOBAL_NM/@deepseek-ai" ]; then
+  mkdir -p "$DEST_NM/@deepseek-ai"
+  linked=0
+  for base in $names; do
+    src="$GLOBAL_NM/@deepseek-ai/$base"
+    dst="$DEST_NM/@deepseek-ai/$base"
+    [ -d "$src" ] || continue
+    [ -e "$dst" ] && continue
+    ln -s "$src" "$dst" 2>/dev/null && linked=$((linked+1))
+  done
+  [ "$linked" = 0 ] || echo "[gen-n] 已软链 $linked 个预设依赖（来自镜像内置包，无需联网安装）"
+fi
 missing=""
 for base in $names; do
   pkg="@deepseek-ai/$base"
