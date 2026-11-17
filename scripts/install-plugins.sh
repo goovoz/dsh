@@ -18,7 +18,13 @@ while IFS= read -r name; do
   dir="${ROOT}/${name}"
   if [ ! -d "${dir}" ]; then echo "[plugins] 缺目录 ${dir}" >&2; failed=1; continue; fi
   # 插件若本身是 git 仓库（submodule），用提交号做指纹；否则退回 package.json 的 mtime+size
-  if git -C "${dir}" rev-parse --verify HEAD >/dev/null 2>&1; then
+  # 指纹只跟「dsh 版本 + 插件包版本 + 补丁集」有关：镜像重建但三者没变时不再重装
+  # （否则每次升级镜像都要重装几十个依赖，首启 4-5 分钟）
+  pkgver=$(node -e "try{console.log(require(process.argv[1]+'/package.json').version)}catch(e){console.log('0')}" "${dir}" 2>/dev/null || echo 0)
+  patchset=$(cat /opt/dsh/PATCHSET 2>/dev/null || echo none)
+  if [ -n "${pkgver}" ]; then
+    stamp="pkg=${pkgver};patch=${patchset}"
+  elif git -C "${dir}" rev-parse --verify HEAD >/dev/null 2>&1; then
     stamp="git:$(git -C "${dir}" rev-parse HEAD)"
   else
     stamp="stat:$(cd "${dir}" && stat -c '%Y-%s' package.json 2>/dev/null || echo 0)"

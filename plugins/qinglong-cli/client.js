@@ -282,7 +282,7 @@ window.__ModuleLoader__.load({
           react.createElement(Field, {
             label: "面板地址（QL_URL）",
             value: f.qlUrl,
-            placeholder: "http://172.20.0.9:5700",
+            placeholder: "http://qinglong.example.com:5700",
             hint:
               "不要带 /open。挂反向代理子路径时写完整根地址，例如 https://example.com/ql" +
               (lockHint("qlUrl") ? " · " + lockHint("qlUrl") : ""),

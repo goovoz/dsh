@@ -53,7 +53,7 @@
 
 | 变量 | 说明 |
 |---|---|
-| `QL_URL` | 面板根地址，例如 `http://172.20.0.9:5700`；挂反代子路径时写 `https://example.com/ql`（不要带 `/open`，插件会自己拼） |
+| `QL_URL` | 面板根地址，例如 `http://<面板IP或域名>:5700`；挂反代子路径时写 `https://example.com/ql`（不要带 `/open`，插件会自己拼） |
 | `QL_CLIENT_ID` / `QL_CLIENT_SECRET` | 面板「系统设置 → 应用设置」创建的应用凭据 |
 | `QL_CLI_PATH` | 可选，覆盖内置 `vendor/ql.js` |
 

@@ -85,7 +85,8 @@ RUN --mount=type=bind,source=plugins,target=/tmp/plugins \
       case " $list " in *" $name "*) ;; *) rm -rf "$d" ;; esac; \
     done; \
     echo "[build] 最终插件目录: $(ls /opt/plugins | tr '\n' ' ')"; \
-    /opt/dsh/scripts/apply-plugin-patches.sh /opt/plugins /tmp/patches
+    /opt/dsh/scripts/apply-plugin-patches.sh /opt/plugins /tmp/patches; \
+    cat /tmp/patches/*.patch 2>/dev/null | sha1sum | cut -c1-12 > /opt/dsh/PATCHSET
 
 # 构建信息：一条命令回答“我这个镜像里到底有什么”
 ARG GIT_COMMIT=unknown
