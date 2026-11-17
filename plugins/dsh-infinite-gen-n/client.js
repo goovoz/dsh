@@ -280,6 +280,31 @@ window.__ModuleLoader__.load({
     };
     var MUTED = { color: "var(--fg-muted, #888)" };
 
+    // 补丁状态的展示文案：明细里直接用中文，避免用户猜 skipped / na 是什么。
+    var STATUS_LABEL = {
+      applied: "已生效",
+      already: "已生效（此前已打）",
+      pending: "还没打",
+      na: "不适用",
+      skipped: "自动跳过",
+      missing_file: "缺文件（本机没有该文件）",
+      unmatched: "原文不符",
+      off: "已关闭",
+    };
+    // 计数行按实际出现的桶拼，保证各行相加 == 补丁总数。
+    function statusLine(h) {
+      var parts = [];
+      parts.push("已生效 " + (h.effective != null ? h.effective : h.applied));
+      parts.push("还没打 " + (h.pending || 0));
+      parts.push("自动跳过 " + (h.skipped || 0));
+      parts.push("不适用 " + (h.na || 0));
+      if (h.missing_file) parts.push("缺文件 " + h.missing_file);
+      if (h.unmatched) parts.push("原文不符 " + h.unmatched);
+      if (h.off) parts.push("已关闭 " + h.off);
+      if (h.other) parts.push("其他 " + h.other);
+      return parts.join(" · ");
+    }
+
     function PatchTab(props) {
       var stPair = react.useState(null);
       var st = stPair[0];
@@ -364,20 +389,16 @@ window.__ModuleLoader__.load({
           }
           return react.createElement("div", { key: i, style: CARD },
             react.createElement("p", { style: TITLE, fontFamily: "monospace", fontSize: "11px", wordBreak: "break-all" }, h.base),
-            react.createElement("p", { style: { margin: 0 } },
-              "已生效 ", react.createElement("b", null, h.applied),
-              " 个 · 还没打 ", react.createElement("b", null, h.pending),
-              " 个 · 自动跳过 ", react.createElement("b", null, h.skipped),
-              " 个 · 不适用 ", react.createElement("b", null, h.na), " 个"),
+            react.createElement("p", { style: { margin: 0 } }, statusLine(h)),
             (h.items && h.items.length)
               ? react.createElement("details", { style: { margin: "8px 0 0" } },
                   react.createElement("summary", { style: Object.assign({}, MUTED, { cursor: "pointer" }) },
-                    "为什么有 " + h.items.length + " 个没打（自动跳过 / 不适用）"),
+                    "为什么有 " + h.items.length + " 个没打（共 " + (h.total || (h.items.length + (h.effective != null ? h.effective : h.applied))) + " 条）"),
                   react.createElement("p", { style: Object.assign({}, MUTED, { margin: "6px 0", fontSize: "11px" }) },
-                    "自动跳过（skipped）和不适用（na）都不是失败：补丁只改写它能精确匹配到的原文，本机这版 DSH 里没有那段代码、或该可选组件没装，就跳过不动，宿主不会被改坏。真正失败的是「还没打」和红字报错。"),
+                    "自动跳过 / 不适用 / 缺文件都不是失败：补丁只改写它能精确匹配到的原文，本机这版 DSH 里没有那段代码、该可选组件没装、或目标文件不存在时就不动，宿主不会被改坏。真正失败的是「还没打」和红字报错。"),
                   h.items.map(function (it, j) {
                     return react.createElement("p", { key: j, style: { margin: "2px 0", fontSize: "11px", fontFamily: "monospace", wordBreak: "break-all" } },
-                      "#" + it.id + " " + it.name + " — " + it.status + (it.desc ? "（" + it.desc + "）" : ""));
+                      "#" + it.id + " " + it.name + " — " + (STATUS_LABEL[it.status] || it.status) + (it.desc ? "（" + it.desc + "）" : ""));
                   }))
               : null);
         }),

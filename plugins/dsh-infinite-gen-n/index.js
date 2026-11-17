@@ -74,15 +74,25 @@ const PATCH_ON = process.env.GEN4_PATCH !== "0";
 
 // ---- 清洗层共享逻辑（工具注册与 /genn/armor 路由共用） ----
 const patchCoreError = (e) => ({ error: String((e && e.message) || e) });
+// 分桶必须覆盖所有状态：漏掉的（missing_file / unmatched / off）以前被塞进 other，
+// 面板上却不显示 other，于是「59+0+16+6=81」和实际 82 条对不上，用户只能看到 23 条明细。
 const countByStatus = (statusMap) => {
-  const c = { applied: 0, pending: 0, na: 0, skipped: 0, other: 0 };
+  const c = { applied: 0, already: 0, effective: 0, pending: 0, na: 0, skipped: 0, missing_file: 0, unmatched: 0, off: 0, other: 0, total: 0 };
   for (const v of Object.values(statusMap || {})) {
+    c.total += 1;
     if (v === "applied") c.applied += 1;
+    else if (v === "already") c.already += 1;
     else if (v === "pending") c.pending += 1;
     else if (v === "na") c.na += 1;
     else if (v === "skipped") c.skipped += 1;
+    else if (v === "missing_file") c.missing_file += 1;
+    else if (v === "unmatched") c.unmatched += 1;
+    else if (v === "off") c.off += 1;
     else c.other += 1;
   }
+  // already = marker 已在，等于生效；面板「已生效」把两者合并，
+  // 这样 已生效 + 明细条数 恒等于 total。
+  c.effective = c.applied + c.already;
   return c;
 };
 
