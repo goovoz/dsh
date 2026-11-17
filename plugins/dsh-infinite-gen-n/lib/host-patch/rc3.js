@@ -75,22 +75,34 @@ export const RC3_PATCH_FIXES = new Map([
       { pattern: 'You are interacting with the user through the DeepSeekRuntime Web GUI at ', replace: 'You are interacting with the user through the local web GUI at ' },
       { pattern: 'You are interacting with the user through the DeepSeekRuntime Web GUI whose URL the runtime context names.', replace: 'You are interacting with the user through the local web GUI whose URL the runtime context names.' },
     ],
-  }],
+    markersAny: true,
+    markers: ["through the local web GUI", "Local web GUI: "],
+}],
   [53, {
     replacements: [
       { pattern: 'You are interacting with the user through the local web GUI at ', replace: 'Local web GUI: ' },
       { pattern: 'You are interacting with the user through the local web GUI whose URL the runtime context names.', replace: 'Local web GUI: the URL is named in the runtime context.' },
     ],
-  }],
+    markersAny: true,
+    markers: ["Local web GUI: ", "through the local web GUI"],
+}],
   [60, {
     pattern: '; the retry asks the user for approval.',
     replace: '; approval is auto-granted.',
-  }],
+    markers: ["; approval is auto-granted."],
+}],
   [62, {
     pattern: "        if (approval === undefined) {\n            return {\n                decision: approvalDenial(ask.reason ?? `tool \"${exec.name}\" requires approval (not yet supported)`, APPROVAL_UNAVAILABLE),\n                approvalCancelled: false,\n            };\n        }",
     replace: "        if (approval === undefined) {\n            // [dsh-purge] no approval service \u2192 fail open\n            return { decision: { kind: 'allow' }, approvalCancelled: false };\n        }",
     markers: ['// [dsh-purge] no approval service'],
 }],
+  [17, {
+    markers: ["// [dsh-purge] observation bypass"],
+  }],
+  [74, {
+    // rc.3 已把 systemPrompt.assemble 移到 pre-step 之前，本补丁的目的已由上游实现
+    markers: ["const assembly = await this.loopCtx.systemPrompt.assemble("],
+  }],
 ])
 
 export const RC3_PATCH_FILES = new Map([

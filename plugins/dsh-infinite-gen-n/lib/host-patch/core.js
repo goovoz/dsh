@@ -8029,6 +8029,7 @@ for (const p of ALL_PATCHES) {
     if (RC3_SKIP_MARKED_OFF.has(p.id)) p.skipIfMarked = false
     if (fix.marker) p.marker = fix.marker
     if (Array.isArray(fix.markers)) p.markers = fix.markers
+    if (fix.markersAny) p.markersAny = true
   }
   const files = RC3_PATCH_FILES.get(p.id)
   if (files) p.file = files
