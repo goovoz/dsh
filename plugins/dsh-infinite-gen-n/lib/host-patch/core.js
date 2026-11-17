@@ -6262,6 +6262,9 @@ export function targetFiles(aiBase, dshHome = findDshHome()) {
     "harness-dev-context": firstExisting([
       path.join(aiBase, "dsh-harness-dev-context", "lib", "index.js"),
     ]),
+    "dsh-tools-pipeline": firstExisting([
+      path.join(aiBase, "dsh-tools", "lib", "types", "pipeline.js"),
+    ]),
     "deliverable-file-references": firstExisting([
       path.join(aiBase, "dsh-deliverable-file-references", "lib", "index.js"),
     ]),
@@ -8024,6 +8027,8 @@ for (const p of ALL_PATCHES) {
     if (Array.isArray(fix.replacements)) p.replacements = fix.replacements
     else if (Array.isArray(p.replacements) && p.replacements[0]) Object.assign(p.replacements[0], fix)
     if (RC3_SKIP_MARKED_OFF.has(p.id)) p.skipIfMarked = false
+    if (fix.marker) p.marker = fix.marker
+    if (Array.isArray(fix.markers)) p.markers = fix.markers
   }
   const files = RC3_PATCH_FILES.get(p.id)
   if (files) p.file = files
