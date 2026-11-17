@@ -1897,6 +1897,13 @@ export function enumeratePatchAiBases(options = {}) {
   };
   add(findAiBaseWeb());
   add(findAiBaseDesktop());
+  // web 容器：dsh 跑的是镜像里的 npm 全局安装，插件默认只扫 profile 的 node_modules，
+  // 结果全局那份 48 条补丁一直是 pending。这里把全局 aiBase 也纳入（不存在则跳过，桌面端无影响）。
+  try {
+    const prefix = path.dirname(path.dirname(process.execPath));
+    add(path.join(prefix, 'lib/node_modules/@deepseek-ai/dsh/node_modules/@deepseek-ai'));
+  } catch {}
+
   for (const root of desktop.listDesktopPackageRoots({ discover })) add(root);
   const env = String(process.env.DSH_BASE || "").trim();
   if (env) add(path.normalize(env));
@@ -2013,11 +2020,11 @@ export function missingAiBaseMessage() {
     if (exe) {
       const asar = desktop.appAsarPath(exe);
       if (asarArchiveIsFile(asar) && desktop.isOfficialHarnessExecutable(exe)) {
-        return `已找到 ${exe}。官方宿主在 app.asar 里，点「应用」会解开 ${desktop.appDirForExecutable(exe)} 并自动重启，不用另跑脚本。`;
+        return `已找到 ${exe}。官方宿主在 app.asar 里，点「一键破甲」会解开 ${desktop.appDirForExecutable(exe)} 并自动重启，不用另跑脚本。`;
       }
       return `已找到桌面应用 ${exe}，但其 resources/app（或 app.asar.unpacked）下没有 @deepseek-ai`;
     }
-    return "未定位到当前桌面应用的 @deepseek-ai。官方客户端点「应用」会解开 app.asar 并重启；第三方 DSH Desktop 直接点「应用」。安装目录任意盘符。";
+    return "未定位到当前桌面应用的 @deepseek-ai。官方客户端点「一键破甲」会解开 app.asar 并重启；第三方 DSH Desktop 直接点「一键破甲」。安装目录任意盘符。";
   }
   return "插件根未找到 / set DSH_BASE";
 }
@@ -2118,7 +2125,7 @@ export async function openSealedDesktopHost(options = {}) {
     recorded,
     upgrade: options.upgrade === true,
   });
-  // 用户点「应用」：归档还在且 stamp 对不上当前 asar，或还没有可用 aiBase，必须先解包再洗。
+  // 用户点「一键破甲」：归档还在且 stamp 对不上当前 asar，或还没有可用 aiBase，必须先解包再洗。
   if (options.forApply === true && asarStill) {
     if (!aiBase || !archive || !sameAsarIdentity(archive, recorded)) extract = true;
   }
@@ -3917,6 +3924,11 @@ const NEW_TOOL_PATCHES = [
           "\t\t\tcontexts: runtimeContextSuppressed ? [] : transformed.contexts\n" +
           "\t\t};",
         replace: COMPLETE_PROMPT_WATERFALL_INJECT,
+      },
+      {
+        // 0.2.x 构建：返回对象里带 tools，且 requiredContexts 就在同一块里；complete 时只留 [completeSection]。
+        pattern: "\t\tconst transformed = await this.ctx.waterfall(scopeTarget(this, scope), \"system-prompt/assemble\", assembly, context, () => Promise.resolve(assembly));\n\t\tif (completeSection === void 0 && !runtimeContextSuppressed) return {\n\t\t\t...transformed,\n\t\t\ttools\n\t\t};\n\t\tconst requiredContexts = new Set([...contextByName.values()].filter((entry) => entry.required === true).map((entry) => entry.name));\n\t\treturn {\n\t\t\t...transformed,\n\t\t\ttools,\n\t\t\tsections: completeSection === void 0 ? transformed.sections : [completeSection],\n\t\t\tcontexts: runtimeContextSuppressed ? transformed.contexts.filter((entry) => requiredContexts.has(entry.name)) : transformed.contexts\n\t\t};",
+        replace: "\t\tconst transformed = await this.ctx.waterfall(scopeTarget(this, scope), \"system-prompt/assemble\", assembly, context, () => Promise.resolve(assembly));\n\t\t\tconst dshPurgeSections = (transformed.sections || []).filter((s) => String(s && s.name || \"\").startsWith(\"dsh-purge\") && String(s.text || \"\").length > 0); // [dsh-purge] complete prompt keeps waterfall inject + tools\n\t\tif (completeSection === void 0 && !runtimeContextSuppressed) return {\n\t\t\t...transformed,\n\t\t\ttools\n\t\t};\n\t\tconst requiredContexts = new Set([...contextByName.values()].filter((entry) => entry.required === true).map((entry) => entry.name));\n\t\treturn {\n\t\t\t...transformed,\n\t\t\ttools,\n\t\t\tsections: completeSection === void 0 ? transformed.sections : [...dshPurgeSections, completeSection],\n\t\t\tcontexts: runtimeContextSuppressed ? transformed.contexts.filter((entry) => requiredContexts.has(entry.name)) : transformed.contexts\n\t\t};",
       },
     ],
     forbid: ["dsh-purge:committed"],

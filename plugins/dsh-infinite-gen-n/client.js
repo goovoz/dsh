@@ -308,7 +308,7 @@ window.__ModuleLoader__.load({
         postArmor(action, function (d) {
           if (d && d.ok) {
             setResult(action === "apply"
-              ? (d.needsFullQuit ? "✓ 已解开 app.asar 并写入补丁，正在重启 DSH…" : "✓ 破甲完成！重启 DSH 后生效。")
+              ? (d.needsFullQuit ? "✓ 补丁已写入宿主，并已安排把 app.asar 换成 app.asar.bak；重启 DSH 后生效。" : "✓ 破甲完成！重启 DSH 后生效。")
               : (d.needsFullQuit ? "✓ 已还原，正在重启 DSH…" : "✓ 已还原！重启 DSH 后生效。"));
             setSt(d);
           } else {
@@ -368,7 +368,11 @@ window.__ModuleLoader__.load({
               "已生效 ", react.createElement("b", null, h.applied),
               " 个 · 还没打 ", react.createElement("b", null, h.pending),
               " 个 · 自动跳过 ", react.createElement("b", null, h.skipped),
-              " 个 · 不适用 ", react.createElement("b", null, h.na), " 个"));
+              " 个 · 不适用 ", react.createElement("b", null, h.na), " 个"),
+            st.sealed
+              ? react.createElement("p", { style: Object.assign({}, MUTED, { margin: "6px 0 0" }) },
+                  "补丁已写进 resources/app，但 app.asar 还在（密封态）：重启 DSH 才会真正用上 app/ 目录。点「一键破甲」会安排把 app.asar 换成 app.asar.bak。web 容器没有密封包，所以那边不存在这一步。")
+              : null);
         }),
         st.coexistence
           ? react.createElement("div", { style: CARD, borderColor: "#f59e0b" },

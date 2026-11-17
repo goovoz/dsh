@@ -139,15 +139,20 @@ export async function armorStatusSnapshot(core = patchCore) {
     hosts,
     coexistence: purgeCoexistenceNotice(core),
   };
+  // 密封态判定和「枚举得到宿主」是两件事：桌面端解开 asar 后 app/ 有宿主了，
+  // 但 app.asar 还在就等于补丁不生效——面板必须看得见这个状态。
+  try {
+    snapshot.sealed = typeof core.desktopAsarStillSealed === "function" ? Boolean(core.desktopAsarStillSealed()) : false;
+  } catch {
+    snapshot.sealed = false;
+  }
   // 枚举不到宿主时给面板一句人话，而不是让它渲染成空白（web 容器有 @deepseek-ai，桌面密封包没有）。
   if (hosts.length === 0) {
     snapshot.empty = true;
     try {
       snapshot.hint = typeof core.missingAiBaseMessage === "function" ? core.missingAiBaseMessage() : "";
-      snapshot.sealed = typeof core.desktopAsarStillSealed === "function" ? Boolean(core.desktopAsarStillSealed()) : false;
     } catch {
       snapshot.hint = "";
-      snapshot.sealed = false;
     }
   }
   return snapshot;
@@ -184,7 +189,24 @@ export async function armorApplyAll(core = patchCore, reapply = armorReapplyInst
       hosts.push({ base, error: String((e && e.message) || e) });
     }
   }
-  return { hosts, coexistence: purgeCoexistenceNotice(core) };
+  // 宿主文件写好了，但 app.asar 还在的话 Electron 仍从 asar 加载 → 补丁不生效。
+  // 这里安排换包（asar → app.asar.bak；被占用时交给后台 helper 等进程退出后再换）。
+  let sealed = false;
+  try {
+    sealed = typeof core.desktopAsarStillSealed === "function" ? Boolean(core.desktopAsarStillSealed()) : false;
+  } catch {
+    sealed = false;
+  }
+  let swap = null;
+  if (sealed) {
+    try {
+      const handoff = typeof core.sealedAsarHandoff === "function" ? core.sealedAsarHandoff() : null;
+      swap = handoff ? core.scheduleSealedDesktopRestart(handoff) : { renamed: false, error: "sealed-handoff-missing" };
+    } catch (e) {
+      swap = { renamed: false, error: String((e && e.message) || e) };
+    }
+  }
+  return { hosts, coexistence: purgeCoexistenceNotice(core), sealed, swap, needsFullQuit: sealed };
 }
 // 桌面官方包：@deepseek-ai 还在 app.asar 里，枚举不到宿主。
 // 走 reapply 的密封包流程（解开 resources/app → 打补丁 → 挪走 asar 并重启），
