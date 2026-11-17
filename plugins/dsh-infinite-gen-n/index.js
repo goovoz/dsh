@@ -7,6 +7,9 @@ import { normalizeRequest } from "./normalize.js";
 // 清洗引擎（dsh-purge core 移植）：静态 import——webServer 路由上下文里动态 import
 // 的相对路径解析不可靠（/genn/armor 曾因此 500），顶层静态 import 是宿主已验证的路径。
 import * as patchCore from "./lib/host-patch/core.js";
+// 桌面官方包是密封 app.asar：枚举不到宿主时，复用 reapply 的「解开 resources/app →
+// 全部宿主打补丁 → 挪走 asar 并重启」流程，否则面板会一片空白、按钮点了也不动。
+import { reapplyInstalled as armorReapplyInstalled } from "./lib/host-patch/reapply.js";
 
 // 预设注册诊断（/genn/scope 响应透出，工作台「验证」tab 可见）
 const presetDeclareState = { attempts: 0, ok: false, error: null, services: "" };
@@ -117,8 +120,7 @@ async function sealedAsarCheck(bases) {
   return results;
 }
 
-async function patchStatusSnapshot() {
-  const core = patchCore;
+export async function armorStatusSnapshot(core = patchCore) {
   const bases = core.enumeratePatchAiBases({ discover: true });
   const hosts = [];
   for (const base of baseofSafe(bases)) {
@@ -129,7 +131,7 @@ async function patchStatusSnapshot() {
       hosts.push({ base, error: String((e && e.message) || e) });
     }
   }
-  return {
+  const snapshot = {
     ok: true,
     engine: "dsh-purge core (ported to dsh-infinite-gen-n)",
     gen4Patch: PATCH_ON ? "on" : "off",
@@ -137,6 +139,18 @@ async function patchStatusSnapshot() {
     hosts,
     coexistence: purgeCoexistenceNotice(core),
   };
+  // 枚举不到宿主时给面板一句人话，而不是让它渲染成空白（web 容器有 @deepseek-ai，桌面密封包没有）。
+  if (hosts.length === 0) {
+    snapshot.empty = true;
+    try {
+      snapshot.hint = typeof core.missingAiBaseMessage === "function" ? core.missingAiBaseMessage() : "";
+      snapshot.sealed = typeof core.desktopAsarStillSealed === "function" ? Boolean(core.desktopAsarStillSealed()) : false;
+    } catch {
+      snapshot.hint = "";
+      snapshot.sealed = false;
+    }
+  }
+  return snapshot;
 }
 function baseofSafe(bases) {
   return Array.isArray(bases) ? bases : [];
@@ -150,8 +164,9 @@ function purgeCoexistenceNotice(core) {
   } catch {}
   return null;
 }
-async function patchApplyAll(core) {
+export async function armorApplyAll(core = patchCore, reapply = armorReapplyInstalled) {
   const bases = core.enumeratePatchAiBases({ discover: true });
+  if (!Array.isArray(bases) || bases.length === 0) return armorApplySealedDesktop(core, reapply);
   const hosts = [];
   for (const base of Array.isArray(bases) ? bases : []) {
     try {
@@ -171,12 +186,35 @@ async function patchApplyAll(core) {
   }
   return { hosts, coexistence: purgeCoexistenceNotice(core) };
 }
+// 桌面官方包：@deepseek-ai 还在 app.asar 里，枚举不到宿主。
+// 走 reapply 的密封包流程（解开 resources/app → 打补丁 → 挪走 asar 并重启），
+// 之后宿主就落在 resources/app，面板与 web 容器一样能看到生效计数。
+async function armorApplySealedDesktop(core, reapply) {
+  const out = { hosts: [], desktop: true, hint: "", sealed: false };
+  try {
+    out.hint = typeof core.missingAiBaseMessage === "function" ? core.missingAiBaseMessage() : "";
+    out.sealed = typeof core.desktopAsarStillSealed === "function" ? Boolean(core.desktopAsarStillSealed()) : false;
+  } catch {
+    // 诊断信息拿不到就只报通用错误
+  }
+  if (!out.sealed) return Object.assign(out, { ok: false, error: out.hint || "没有找到可清洗的宿主（@deepseek-ai）" });
+  try {
+    const result = await reapply({ preserveClientBundles: true });
+    return Object.assign(out, result || {}, { ok: Boolean(result && result.ok) });
+  } catch (e) {
+    return Object.assign(out, { ok: false, error: String((e && e.message) || e) });
+  }
+}
 async function patchRevertAll(core) {
   const r = await core.revertAllHosts({});
-  return {
+  const out = {
     reverted: (r.reverted || []).length,
     errors: (r.errors || []).map(([p, e]) => ({ path: p, error: String(e) })),
   };
+  if (out.reverted === 0 && out.errors.length === 0) {
+    try { out.hint = typeof core.missingAiBaseMessage === "function" ? core.missingAiBaseMessage() : ""; } catch {}
+  }
+  return out;
 }
 const normalizeStats = {
   steps: 0,
@@ -758,7 +796,7 @@ function registerScopeRoute(ctx, config) {
     const fail = (code, msg) => send(res, code, { ok: false, error: msg });
     if (req.method === "POST") return armorRoutePost(req, res);
     if (req.method !== "GET") return fail(405, "method");
-    patchStatusSnapshot().then(
+    armorStatusSnapshot().then(
       (st) => send(res, 200, st),
       (e) => fail(500, String((e && e.message) || e)),
     );
@@ -767,7 +805,7 @@ function registerScopeRoute(ctx, config) {
     try {
       const out = action === "revert"
         ? await patchRevertAll(patchCore)
-        : await patchApplyAll(patchCore);
+        : await armorApplyAll(patchCore);
       send(res, 200, Object.assign({ ok: true }, out));
     } catch (e) {
       send(res, 500, { ok: false, error: String((e && e.message) || e) });

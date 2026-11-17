@@ -307,11 +307,12 @@ window.__ModuleLoader__.load({
         setResult(null);
         postArmor(action, function (d) {
           if (d && d.ok) {
-            setResult(action === "apply" ? "✓ 破甲完成！重启 DSH 后生效。"
-              : "✓ 已还原！重启 DSH 后生效。");
+            setResult(action === "apply"
+              ? (d.needsFullQuit ? "✓ 已解开 app.asar 并写入补丁，正在重启 DSH…" : "✓ 破甲完成！重启 DSH 后生效。")
+              : (d.needsFullQuit ? "✓ 已还原，正在重启 DSH…" : "✓ 已还原！重启 DSH 后生效。"));
             setSt(d);
           } else {
-            setResult("出错了：" + ((d && d.error) || "未知错误"));
+            setResult("出错了：" + ((d && d.error) || (d && d.hint) || "未知错误"));
             if (d) setSt(d);
           }
           setBusy(false);
@@ -347,6 +348,14 @@ window.__ModuleLoader__.load({
             on ? "● 可完善" : "○ 完善功能已关闭"),
           react.createElement("p", { style: Object.assign({}, MUTED, { margin: 0 }) },
             "完善前会自动备份原文件；重复点击没有副作用；完善不用重启电脑，重启 DSH 就生效。")),
+        (!st.hosts || st.hosts.length === 0)
+          ? react.createElement("div", { style: Object.assign({}, CARD, { borderColor: "#f59e0b" }) },
+              react.createElement("p", { style: { margin: 0 } }, st.hint || "没有找到可清洗的宿主（@deepseek-ai）。"),
+              st.sealed
+                ? react.createElement("p", { style: Object.assign({}, MUTED, { margin: "6px 0 0" }) },
+                    "桌面版是密封 app.asar：点「一键破甲」会解开 resources/app、把补丁写进去，然后重启 DSH。web 容器里 @deepseek-ai 是明文目录，所以那边直接显示计数。")
+                : null)
+          : null,
         (st.hosts || []).map(function (h, i) {
           if (h.error) {
             return react.createElement("div", { key: i, style: CARD },
