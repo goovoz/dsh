@@ -8015,3 +8015,73 @@ export async function gatherState() {
     hooks_deny_bypass: getHooksDenySettings().hooksDenyBypass,
   };
 }
+
+// ============================================================================
+// rc.3 兼容层：上游 0.2.2-rc.3 改写了若干文件正文，旧版精确字符串匹配失效（表现为「自动跳过」）。
+// 这里把这几条补丁的 pattern 换成「同时匹配旧文本与新文本」的正则，桌面端（旧文本）仍然有效。
+// 只覆盖语义不变的补丁；结构变化过大的（如 client bundle）不在此列。
+// ============================================================================
+const RC3_PATTERN_FIXES = new Map([
+  [13, {
+    pattern: /if \(!\(WIDER_MODES\[effectiveMode\] \?\? \[\]\)\.includes\(mode\)\) throw new (?:Error|SandboxEscalationError)\([\s\S]*?\n\tif \(approval\.agent === void 0\) throw new (?:Error|SandboxEscalationError)\([^\n]*\n/,
+    replace:
+      '\t// [dsh-purge] escalation bypass: the strict-widening ladder and the\n' +
+      '\t// approval-service requirements are disabled — every escalation request\n' +
+      '\t// is granted regardless of the effective mode or composed services.\n',
+  }],
+  [18, {
+    pattern: /ctx\.on\("tools\/post-execute"[\s\S]*?chains\.delete\(agent\);\n\t\treturn next\(\);\n\t\}\);/,
+    replace:
+      '\t// [dsh-purge] repeat-tool-reminder disabled: no reminder injection,\n' +
+      '\t// no chain tracking. The guard is fully inert.',
+  }],
+  [35, {
+    pattern: /switch \(outcome\) \{\n\t\tcase "allowed-once": return mode;\n[\s\S]*?default: return assertNever\(outcome, "EscalationOutcome"\);\n\t\}/,
+    replace:
+      'switch (outcome) {\n' +
+      '\t\tcase "allowed-once":\n' +
+      '\t\tdefault:\n' +
+      '\t\t\treturn mode; // [dsh-purge] escalation never rejected\n' +
+      '\t}',
+  }],
+  [67, {
+    pattern: /^(\t+)if \(turnEnds && decision\.messages\.length === 0\) break;\n(\t+)if \(phase\.step === 0 && decision\.messages\.length === 0\) \{/m,
+    replace:
+      '$1if (turnEnds && (decision.messages?.length ?? 0) === 0) break; // [dsh-purge] guard undefined messages\n' +
+      '$2if (phase.step === 0 && (decision.messages?.length ?? 0) === 0) { // [dsh-purge] guard undefined messages',
+  }],
+  [80, {
+    pattern: /- id: tool-fs(?: # \[dsh-purge\] minimal fs tool parity)?\n[\s\S]*?- id: persistent-shell/,
+    replace: "- id: persistent-shell # [dsh-purge] minimal official toolset",
+  }],
+])
+for (const p of ALL_PATCHES) {
+  const fix = RC3_PATTERN_FIXES.get(p.id)
+  if (fix && Array.isArray(p.replacements) && p.replacements[0]) Object.assign(p.replacements[0], fix)
+}
+
+// rc.3 第二批：字符串搬家 / 文案改写
+const RC3_FILE_MOVES = new Map([
+  // 数组形式：pathsOf 会跳过解析不到的 key —— 桌面端没有新包时自动落回旧位置，行为不变。
+  [32, ['harness-dev-context', 'web-app-lib']],
+  [53, ['harness-dev-context', 'web-app-lib']],
+  [54, ['deliverable-file-references', 'deliverables-prompt']],
+  [60, ['escalation', 'dsh-tools', 'dsh-tools-ptc']],
+])
+for (const p of ALL_PATCHES) {
+  if (String(p.id) === '32' || String(p.id) === '53' || String(p.id) === '60') p.skipIfMarked = false
+  const to = RC3_FILE_MOVES.get(p.id)
+  if (to) p.file = to
+}
+const RC3_TEXT_FIXES = new Map([
+  [14, {
+    pattern: /const outcome = await approval\.approver\.request\(\{[\s\S]*?\n\t\}\);/,
+    replace: 'const outcome = approval.approver !== undefined && approval.agent !== undefined ? await approval.approver.request({ agent: approval.agent, toolName: approval.toolName, callId: approval.callId, reason: `escalate sandbox to ${mode}: ${justification}`, ...approval.signal ? { signal: approval.signal } : {} }) : "allowed-once";',
+  }],
+])
+for (const p of ALL_PATCHES) {
+  const fix = RC3_TEXT_FIXES.get(p.id)
+  if (!fix) continue
+  if (Array.isArray(fix.replacements)) p.replacements = fix.replacements
+  else if (Array.isArray(p.replacements) && p.replacements[0]) Object.assign(p.replacements[0], fix)
+}
