@@ -300,3 +300,21 @@ CI（`.github/workflows/build.yml`）用 `docker/setup-qemu-action` + `docker/se
 
 MIT（见 `LICENSE`）。DSH 本体、第三方插件各自遵循其原始许可；`plugins/` 下的插件保留原作者版权。
 
+## 破甲补丁与 dsh 版本适配（0.2.2-rc.3）
+
+插件把 rc.3 的补丁定义放在独立模块 `plugins/dsh-infinite-gen-n/lib/host-patch/rc3.js`，由 `core.js` 构造补丁表后合并（import + 一个循环，不改引擎）。
+
+```
+lib/host-patch/core.js   # 补丁引擎 + 补丁表
+lib/host-patch/rc3.js    # rc.3 的 pattern/replace 与目标文件映射
+```
+
+当前 web/Linux 实测：**applied 68 / skipped 2 / na 11 / missing 1（共 82）**。
+
+| 情况 | 说明 |
+| --- | --- |
+| 56/77 REWIND_* | 目标是官方压缩后的 client.js（704KB/26 行），锚点已不存在，需重建前端 |
+| 32/53 | rc.3 品牌名改为 DeepSeekRuntime，已合并为一条（32 一步到位，53 仅标记） |
+| 17/60/74 | 已生效；74 由上游 rc.3 自行实现（assemble 已在 pre-step 之前） |
+
+**dsh 升级时**：只改 rc3.js（或新增 rc4.js + 一行 import），不必动 340KB 的 core.js。
