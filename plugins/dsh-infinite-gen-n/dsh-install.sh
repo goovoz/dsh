@@ -19,8 +19,8 @@ echo "[gen-n] 已补全安装副本：$target"
 # ---- 2) 预设行依赖补齐
 names=$(grep -o '"@deepseek-ai/[A-Za-z0-9./_-]*"' "$PLUGIN_DIR/preset-rows.js" | tr -d '"' | sed 's|@deepseek-ai/||' | cut -d/ -f1 | sort -u)
 
-# 2a) 先软链镜像里已有的全局包：镜像本来就自带这些 @deepseek-ai/dsh-*（且版本与核心一致），
-#     软链比 pnpm 安装快两个数量级（首次启动从 4-5 分钟降到秒级）。
+# 2a) 先软链镜像里已有的全局包（版本与核心一致）：比 pnpm 联网安装快两个数量级（首启 4-5 分钟 → 10 秒级）。
+#     代价：破甲补丁会顺着软链写进镜像层，容器重建后需要重点一次「一键破甲」。
 GLOBAL_NM=/usr/local/lib/node_modules/@deepseek-ai/dsh/node_modules
 DEST_NM="$PROFILE_DIR/node_modules"
 if [ -d "$GLOBAL_NM/@deepseek-ai" ]; then
