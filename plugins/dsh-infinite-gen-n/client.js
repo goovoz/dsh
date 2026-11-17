@@ -372,6 +372,17 @@ window.__ModuleLoader__.load({
             st.sealed
               ? react.createElement("p", { style: Object.assign({}, MUTED, { margin: "6px 0 0" }) },
                   "补丁已写进 resources/app，但 app.asar 还在（密封态）：重启 DSH 才会真正用上 app/ 目录。点「一键破甲」会安排把 app.asar 换成 app.asar.bak。web 容器没有密封包，所以那边不存在这一步。")
+              : null,
+            (h.items && h.items.length)
+              ? react.createElement("details", { style: { margin: "8px 0 0" } },
+                  react.createElement("summary", { style: Object.assign({}, MUTED, { cursor: "pointer" }) },
+                    "为什么有 " + h.items.length + " 个没打（自动跳过 / 不适用）"),
+                  react.createElement("p", { style: Object.assign({}, MUTED, { margin: "6px 0", fontSize: "11px" }) },
+                    "自动跳过（skipped）和不适用（na）都不是失败：补丁只改写它能精确匹配到的原文，本机这版 DSH 里没有那段代码、或该可选组件没装，就跳过不动，宿主不会被改坏。真正失败的是「还没打」和红字报错。"),
+                  h.items.map(function (it, j) {
+                    return react.createElement("p", { key: j, style: { margin: "2px 0", fontSize: "11px", fontFamily: "monospace", wordBreak: "break-all" } },
+                      "#" + it.id + " " + it.name + " — " + it.status + (it.desc ? "（" + it.desc + "）" : ""));
+                  }))
               : null);
         }),
         st.coexistence

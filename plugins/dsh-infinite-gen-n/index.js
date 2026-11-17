@@ -126,7 +126,7 @@ export async function armorStatusSnapshot(core = patchCore) {
   for (const base of baseofSafe(bases)) {
     try {
       const st = await core.patchStatus(base);
-      hosts.push(Object.assign({ base }, countByStatus(st)));
+      hosts.push(Object.assign({ base }, countByStatus(st), { items: statusItems(core, st) }));
     } catch (e) {
       hosts.push({ base, error: String((e && e.message) || e) });
     }
@@ -156,6 +156,25 @@ export async function armorStatusSnapshot(core = patchCore) {
     }
   }
   return snapshot;
+}
+// 面板要回答「为什么这条没打」：只回非 applied/already 的条目，避免每次轮询塞 82 条。
+const SETTLED_STATUSES = new Set(["applied", "already"]);
+function statusItems(core, statusMap) {
+  const meta = new Map((core.ALL_PATCHES || []).map((p) => [p.id, p]));
+  const out = [];
+  for (const [id, st] of Object.entries(statusMap || {})) {
+    if (SETTLED_STATUSES.has(st)) continue;
+    const p = meta.get(Number(id)) || {};
+    out.push({
+      id: Number(id),
+      name: p.name || "",
+      status: st,
+      layer: p.layer || "",
+      optional: Boolean(p.optional),
+      desc: String(p.desc || "").slice(0, 80),
+    });
+  }
+  return out.sort((a, b) => a.id - b.id);
 }
 function baseofSafe(bases) {
   return Array.isArray(bases) ? bases : [];
