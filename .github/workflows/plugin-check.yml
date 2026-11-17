@@ -6,9 +6,11 @@ on:
     paths:
       - "plugins/**"
       - ".github/workflows/plugin-check.yml"
+      - "scripts/check-plugin-files.mjs"
   pull_request:
     paths:
       - "plugins/**"
+      - "scripts/check-plugin-files.mjs"
   workflow_dispatch:
 
 jobs:
@@ -29,6 +31,10 @@ jobs:
       - name: Syntax check (${{ matrix.plugin }})
         working-directory: plugins/${{ matrix.plugin }}
         run: node --check index.js
+
+      - name: files 白名单覆盖运行期 import (${{ matrix.plugin }})
+        working-directory: plugins/${{ matrix.plugin }}
+        run: node ../../scripts/check-plugin-files.mjs .
 
       - name: dsh-install.sh syntax (${{ matrix.plugin }})
         working-directory: plugins/${{ matrix.plugin }}
