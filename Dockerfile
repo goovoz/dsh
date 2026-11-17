@@ -99,8 +99,11 @@ LABEL org.opencontainers.image.title="dsh-web" \
       org.opencontainers.image.source="https://github.com/goovoz/dsh" \
       org.opencontainers.image.licenses="MIT"
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=180s --retries=3 \
-  CMD curl -fsS -o /dev/null http://127.0.0.1:8899/ || exit 1
+# 健康检查只看「网关端口是否在 listen」：首次启动要装几分钟依赖，此时 HTTP 还是 502，
+# 用 HTTP 判活会被编排器（1Panel 的容器升级）判成启动失败并删容器。
+# dsh 进程本身由 entrypoint 看护（崩溃自动重启），网关在就代表容器还活着。
+HEALTHCHECK --interval=30s --timeout=5s --start-period=900s --retries=5 \
+  CMD bash -c 'timeout 3 bash -c "echo > /dev/tcp/127.0.0.1/8899"' || exit 1
 
 EXPOSE 8899
 ENTRYPOINT ["/usr/bin/tini","--","/opt/dsh/entrypoint.sh"]

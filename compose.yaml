@@ -12,8 +12,10 @@ services:
   dsh-web:
     image: ${IMAGE_TAG:-ghcr.io/goovoz/dsh:latest}
     container_name: ${CONTAINER_NAME:-dsh-web}
-    # 配置错误会 exit 64：用 on-failure 而不是 unless-stopped，避免占位 PUBLIC_HOST 触发无限重启
-    restart: on-failure:5
+    # 重启策略：unless-stopped —— 宿主机重启/守护进程重启后容器会自动回来。
+    # 配置错误（exit 64）不会变成重启风暴：入口在 DSH_CONFIG_HOLD=1 时会先停 5 分钟再退出，
+    # 于是最多每 5 分钟重试一次，日志不会刷屏；改好 .env 后 docker compose up -d 即可。
+    restart: unless-stopped
     ports:
       # DSH_PORT 只写端口号（如 8899）。写成 127.0.0.1:8899 时 Docker 只把端口发布到宿主回环，
       # 其它机器访问 <宿主IP>:8899 会直接 Connection refused（浏览器表现为转圈或打不开），
@@ -38,6 +40,8 @@ services:
       # （PUBLIC_HOST 仍然必填，不能只设这个开关。）
       # 必须在此声明，否则宿主 env（shell / .env）不会传进容器。
       DSH_ALLOW_LOOPBACK: ${DSH_ALLOW_LOOPBACK:-0}
+      # 配置错误时先挂起再退出（配合 restart: unless-stopped，避免 1 秒一次的重启风暴）
+      DSH_CONFIG_HOLD: ${DSH_CONFIG_HOLD:-1}
       # 【可选，默认 1】给 llm-pi-ai 的模型补 input: [ text, image ]（图片输入能力）。
       # 置 0 关闭；只对个别模型关闭用 DSH_VISION_EXCLUDE="cn:xxx,cn:yyy"。
       DSH_ENABLE_VISION: ${DSH_ENABLE_VISION:-1}
@@ -56,11 +60,13 @@ services:
     cap_add:
       - SYS_ADMIN
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS -o /dev/null http://127.0.0.1:8899/ || exit 1"]
+      test: ["CMD-SHELL", "timeout 3 bash -c 'echo > /dev/tcp/127.0.0.1/8899' || exit 1"]
       interval: 30s
       timeout: 5s
-      start_period: 180s   # 首次启动要下载 extras，给足时间
-      retries: 3
+      # 首次启动要装 extras + 插件预设依赖（实测 4-6 分钟）；1Panel 之类的编排把 unhealthy 当升级失败会删容器，
+      # 所以给足 15 分钟，正常启动后 healthcheck 很快就会变 healthy。
+      start_period: 900s
+      retries: 5
     logging:
       driver: json-file
       options:

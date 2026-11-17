@@ -24,6 +24,12 @@ fail() {
   echo "[entrypoint] ✗ PUBLIC_HOST 未正确设置：$1" >&2
   echo "[entrypoint]   PUBLIC_HOST 必须等于浏览器实际访问的 host[:port]，例如 192.168.1.10:${PORT} 或 app.example.com" >&2
   hint_ips >&2
+  # 配合 restart: unless-stopped：先停一会儿再退出，避免 1 秒一次的重启 + 日志刷屏。
+  # DSH_CONFIG_HOLD=0 时保持原来的「立刻 exit 64」行为（CI 的就地校验依赖它）。
+  if [ "${DSH_CONFIG_HOLD:-0}" = "1" ]; then
+    echo "[entrypoint] 5 分钟后重试；改好配置后执行: docker compose up -d --force-recreate" >&2
+    sleep 300
+  fi
   exit 64
 }
 
@@ -55,6 +61,13 @@ export INTERNAL_AUTHORITY
 
 echo "[entrypoint] dsh $(dsh --version 2>/dev/null | head -1) | home=${DSH_HOME} | profile=${PROFILE} | 访问地址=${PUBLIC_URL}"
 
+# 先把网关起来：首次启动要装 extras/插件的几十个依赖（几分钟），
+# 这期间容器若能通过 healthcheck，编排器（1Panel / compose）就不会把它当成启动失败。
+# 网关此时会把 / 302 到 dsh 的 token 页，dsh 起来之前访问会短暂 502，属正常。
+node /opt/dsh/gateway.mjs &
+GATEWAY_PID=$!
+trap 'kill -TERM "${GATEWAY_PID}" 2>/dev/null' EXIT
+
 if [ "${DSH_EXTRAS:-1}" = "1" ]; then
   /opt/dsh/scripts/install-extras.sh || echo "[entrypoint] extras 安装失败（继续启动）"
 fi
@@ -79,10 +92,6 @@ fi
 
 # 模型图片输入能力（幂等）：模型没声明 input 时 DSH 认为它只收文本，发图会被拒
 /opt/dsh/scripts/enable-vision.sh || echo "[entrypoint] vision 补丁失败（继续启动）"
-
-node /opt/dsh/gateway.mjs &
-GATEWAY_PID=$!
-trap 'kill -TERM "${GATEWAY_PID}" 2>/dev/null' EXIT
 
 # 连续快速崩溃时退避，避免日志洪泛与 CPU 打满
 BACKOFF=3
