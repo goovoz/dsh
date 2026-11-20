@@ -99,6 +99,7 @@ fi
 # 模型图片输入能力（幂等）：模型没声明 input 时 DSH 认为它只收文本，发图会被拒
 /opt/dsh/scripts/enable-vision.sh || echo "[entrypoint] vision 补丁失败（继续启动）"
 
+mkdir -p "${DSH_HOME}/logs"
 # 连续快速崩溃时退避，避免日志洪泛与 CPU 打满
 BACKOFF=3
 while true; do
@@ -112,8 +113,8 @@ while true; do
       --no-open \
       --public-url "${PUBLIC_URL}" \
       --trusted-host "${INTERNAL_AUTHORITY}" "${INTERNAL_AUTHORITY%%:*}" "${PUBLIC_HOST}" "${PUBLIC_HOST%%:*}" 127.0.0.1 "127.0.0.1:${DSH_WEB_PORT:-3080}" \
-      2>&1 | node /opt/dsh/capture.mjs
-  code=$?
+      2>&1 | tee -a "${DSH_HOME}/logs/dsh.log" | node /opt/dsh/capture.mjs
+  code=${PIPESTATUS[0]}
   RAN_FOR=$(( $(date +%s) - STARTED_AT ))
   if [ "${RAN_FOR}" -ge 60 ]; then BACKOFF=3; fi
   echo "[entrypoint] dsh exited (code=${code}, ran ${RAN_FOR}s); restarting in ${BACKOFF}s"
