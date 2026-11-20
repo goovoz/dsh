@@ -81,6 +81,7 @@ case "$(printf '%s' "${DSH_PLUGINS:-0}" | tr 'A-Z' 'a-z')" in
     /opt/dsh/scripts/install-plugins.sh || echo "[entrypoint] 插件安装失败（继续启动）" ;;
 esac
 
+/opt/dsh/scripts/profile-version-guard.sh || echo "[entrypoint] profile 版本检查失败（继续启动）"
 # 首次启动先初始化 profile（dsh plugin list 会按模板落地 profiles/<name>/，含 cordis.patch.yml）
 if [ ! -f "${PROFILE_DIR}/package.json" ]; then
   echo "[entrypoint] 初始化 profile ${PROFILE}"
